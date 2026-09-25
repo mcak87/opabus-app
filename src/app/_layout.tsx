@@ -1,0 +1,38 @@
+import { Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black, useFonts } from '@expo-google-fonts/nunito';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
+
+import { C } from '@/constants/theme';
+import { DataProvider } from '@/data/DataContext';
+import { useLang } from '@/i18n';
+
+SplashScreen.preventAutoHideAsync();
+
+const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: C.bg, primary: C.blue, text: C.text } };
+
+export default function RootLayout() {
+  const [loaded] = useFonts({ Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black });
+  const lang = useLang();
+
+  useEffect(() => {
+    if (loaded) SplashScreen.hideAsync();
+  }, [loaded]);
+
+  if (!loaded) return null;
+
+  return (
+    <ThemeProvider value={theme}>
+      <DataProvider>
+        <StatusBar style="dark" />
+        <Stack key={lang} screenOptions={{ headerShown: false, contentStyle: { backgroundColor: C.bg } }}>
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="stop/[region]/[station]" />
+          <Stack.Screen name="trip/[region]/[trip]" />
+          <Stack.Screen name="s/[region]/[stops]" />
+        </Stack>
+      </DataProvider>
+    </ThemeProvider>
+  );
+}

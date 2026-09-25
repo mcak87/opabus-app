@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "OpaBus",
+    "slug": "opabus",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/opabus-icon-1024.png",
+    "scheme": "opabus",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.opabus.app",
+      "icon": "./assets/images/opabus-icon-1024.png",
+      "supportsTablet": false,
+      "associatedDomains": [
+        "applinks:opabus.com"
+      ]
+    },
+    "android": {
+      "package": "com.opabus.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1E4FD8",
+        "foregroundImage": "./assets/images/opabus-icon-1024.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "opabus.com",
+              "pathPrefix": "/s/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1E4FD8",
+          "image": "./assets/images/opabus-icon-1024.png",
+          "imageWidth": 160
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "OpaBus uses your location to show the nearest bus stops and departures. Your location stays on your phone."
+        }
+      ],
+      "expo-sqlite",
+      "expo-localization",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
