@@ -6,11 +6,12 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { Icon } from '@/components/Icon';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { LineBadge, Txt } from '@/components/ui';
-import { C } from '@/constants/theme';
+import { C, shadow } from '@/constants/theme';
 import { minutesTo, stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { lastDeparturesToday, stationById, stationDepartures, type Departure, type RegionMeta, type Station } from '@/data/queries';
 import { t, useLang } from '@/i18n';
+import { isFavorite, toggleFavorite, useSettings } from '@/lib/settings';
 import { athensNow, formatDate, type Now } from '@/lib/time';
 
 const STEP = 3 * 3600;
@@ -25,6 +26,7 @@ export default function StopScreen() {
   const [now, setNow] = useState<Now>(() => athensNow());
   const [span, setSpan] = useState(STEP);
   const [error, setError] = useState(false);
+  const { favorites } = useSettings();
 
   const load = useCallback(async () => {
     try {
@@ -52,10 +54,22 @@ export default function StopScreen() {
 
   const names = st ? stationNames(st) : null;
   const expired = meta && meta.validTo > 0 && meta.validTo < now.date;
+  const fav = isFavorite(favorites, region, Number(station));
+
+  const star = st ? (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={fav ? t('favRemove') : t('favAdd')}
+      accessibilityState={{ selected: fav }}
+      onPress={() => toggleFavorite({ region, station: st.id, name: st.name, name_en: st.name_en })}
+      style={s.star}>
+      <Icon name="star" size={24} color={fav ? C.orange : C.ink} fill={fav ? C.yellow : 'none'} stroke={2.2} />
+    </Pressable>
+  ) : null;
 
   return (
     <View style={s.screen}>
-      <ScreenHeader region={region} kicker={t('departuresTitle')} title={names?.main ?? '…'} sub={names?.sub} />
+      <ScreenHeader region={region} kicker={t('departuresTitle')} title={names?.main ?? '…'} sub={names?.sub} right={star} />
       <ScrollView contentContainerStyle={s.body}>
         {meta ? (
           <Txt w="bold" size={13} color={expired ? C.orangeText : C.muted} style={{ paddingHorizontal: 8 }}>
@@ -145,4 +159,5 @@ const s = StyleSheet.create({
   more: { alignItems: 'center', paddingVertical: 12 },
   lastCard: { flexDirection: 'row', gap: 14, backgroundColor: C.orangeBg, borderColor: C.orangeLine, borderWidth: 1.5, borderRadius: 18, padding: 14, marginTop: 4 },
   lastIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.orange, alignItems: 'center', justifyContent: 'center' },
+  star: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...shadow },
 });

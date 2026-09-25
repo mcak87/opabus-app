@@ -84,6 +84,31 @@ export async function nearbyStations(db: Db, lat: number, lon: number, maxM = 80
     .slice(0, limit);
 }
 
+/**
+ * Węzły regionu: przystanki z największą liczbą linii (potem kursów), rozrzucone po różnych miejscowościach
+ * (min. odstęp w metrach). Liczba linii, a nie kursów – inaczej wygrywa jedna częsta linia miejska.
+ */
+export async function popularStations(db: Db, limit = 6, minGapM = 3500): Promise<Station[]> {
+  const rows = await db.all<Station>(
+    `SELECT st.id, st.name, st.name_en, st.lat, st.lon
+       FROM trips t
+       JOIN patterns p ON p.id = t.pattern_id
+       JOIN pattern_stops ps ON ps.pattern_id = t.pattern_id
+       JOIN stops s ON s.id = ps.stop_id
+       JOIN stations st ON st.id = s.station_id
+      GROUP BY st.id
+      ORDER BY COUNT(DISTINCT p.route_id) DESC, COUNT(*) DESC
+      LIMIT 300`,
+  );
+  const out: Station[] = [];
+  for (const r of rows) {
+    if (out.some((o) => distanceM(o.lat, o.lon, r.lat, r.lon) < minGapM)) continue;
+    out.push({ id: r.id, name: r.name, name_en: r.name_en, lat: r.lat, lon: r.lon });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 export async function stationById(db: Db, id: number): Promise<Station | null> {
   const rows = await db.all<Station>('SELECT id, name, name_en, lat, lon FROM stations WHERE id = ?', [id]);
   return rows[0] ?? null;

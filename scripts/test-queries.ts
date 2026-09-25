@@ -12,6 +12,7 @@ import {
   loadCalendar,
   loadMeta,
   nearbyStations,
+  popularStations,
   searchStations,
   stationDepartures,
   tripTimeline,
@@ -57,3 +58,4 @@ if (first) {
   console.log(`\nKurs ${first.shortName} ${first.time}: ${tl.length} przystanków, ${tl[0].name} ${tl[0].time} → ${tl.at(-1)!.name} ${tl.at(-1)!.time}`);
 }
 console.log('\nSzukaj „lind”:', (await searchStations(db, 'lind')).map((s) => s.name).join(', '));
+console.log('\nPopularne:', (await popularStations(db, 6, Number(process.env.GAP || 3500))).map((s) => s.name_en || s.name).join(', '));

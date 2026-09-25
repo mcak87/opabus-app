@@ -1,32 +1,43 @@
-// Start – najbliższe przystanki z najbliższymi odjazdami (zasada 10 planera: kilka przystanków w okolicy).
+// Start – z lokalizacją: najbliższe przystanki z odjazdami (zasada 10 planera: kilka przystanków w okolicy).
+// Bez lokalizacji (albo poza regionami): „Skąd chcesz jechać?” – wyszukiwarka, ulubione, popularne przystanki regionu.
 import * as Location from 'expo-location';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DepartureRow } from '@/components/DepartureRow';
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
+import { EnableLocationCard, FavoritesSection, PopularSection } from '@/components/StartSections';
+import { SectionTitle, StationCard } from '@/components/StationCard';
 import { Button, Card, PanoramaHeader, Pill, Txt } from '@/components/ui';
-import { C } from '@/constants/theme';
+import { C, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { loadNearby, stationNames, type StationWithDeps } from '@/data/nearby';
 import { t, useLang } from '@/i18n';
 import { walkMinutes, type LatLon } from '@/lib/geo';
+import { setHomeRegion, useSettings } from '@/lib/settings';
 import { athensNow, hhmm } from '@/lib/time';
 
-type Loc = { state: 'checking' } | { state: 'ask' } | { state: 'denied' } | { state: 'locating' } | { state: 'ok'; p: LatLon };
+type Loc =
+  | { state: 'checking' }
+  | { state: 'locating' }
+  | { state: 'ok'; p: LatLon }
+  /** canAsk: można jeszcze zapytać o zgodę; gps: zgoda jest, ale telefon nie podaje pozycji (wyłączona lokalizacja). */
+  | { state: 'off'; canAsk: boolean; gps?: boolean };
 
 export default function StartScreen() {
   useLang();
   const insets = useSafeAreaInsets();
   const data = useData();
+  const { homeRegion } = useSettings();
   const [loc, setLoc] = useState<Loc>({ state: 'checking' });
   const [items, setItems] = useState<StationWithDeps[] | null>(null);
   const [now, setNow] = useState(() => athensNow());
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [tick, setTick] = useState(0);
+  const [pickRegion, setPickRegion] = useState(false);
 
   const locate = useCallback(async () => {
     setLoc({ state: 'locating' });
@@ -36,21 +47,44 @@ export default function StartScreen() {
       const cur = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       setLoc({ state: 'ok', p: { lat: cur.coords.latitude, lon: cur.coords.longitude } });
     } catch {
-      if (!last) setLoc({ state: 'denied' });
+      if (!last) setLoc({ state: 'off', canAsk: true, gps: true });
     }
   }, []);
 
   useEffect(() => {
     Location.getForegroundPermissionsAsync().then((perm) => {
       if (perm.granted) locate();
-      else setLoc({ state: perm.canAskAgain ? 'ask' : 'denied' });
+      else setLoc({ state: 'off', canAsk: perm.canAskAgain });
     });
   }, [locate]);
 
-  const askPermission = async () => {
+  // Powrót z ustawień telefonu: jeśli lokalizacja została włączona, od razu jej używamy.
+  useEffect(() => {
+    if (loc.state !== 'off') return;
+    const sub = AppState.addEventListener('change', (st) => {
+      if (st !== 'active') return;
+      Location.getForegroundPermissionsAsync().then((perm) => {
+        if (perm.granted) locate();
+      });
+    });
+    return () => sub.remove();
+  }, [loc.state, locate]);
+
+  const enableLocation = async () => {
+    if (loc.state !== 'off') return;
+    if (loc.gps) {
+      // Android pozwala włączyć lokalizację okienkiem systemowym; iPhone – tylko w ustawieniach.
+      if (Platform.OS === 'android') await Location.enableNetworkProviderAsync().then(locate, () => {});
+      else Linking.openSettings();
+      return;
+    }
+    if (!loc.canAsk) {
+      Linking.openSettings();
+      return;
+    }
     const perm = await Location.requestForegroundPermissionsAsync();
     if (perm.granted) locate();
-    else setLoc({ state: 'denied' });
+    else setLoc({ state: 'off', canAsk: perm.canAskAgain });
   };
 
   const point = loc.state === 'ok' ? loc.p : null;
@@ -64,8 +98,12 @@ export default function StartScreen() {
     [candidates, data.installed],
   );
   const hasLocalRegion = candidates.some((c) => data.installed[c.region]);
+  const installedRegions = Object.keys(data.installed).filter((r) => !OVERLAY_REGIONS.has(r));
+  const manualRegion = homeRegion && data.installed[homeRegion] ? homeRegion : installedRegions[0];
+  const outside = !!point && !!data.manifest && candidates.length === 0;
 
-  const [tick, setTick] = useState(0);
+  const mode: 'wait' | 'nearby' | 'download' | 'manual' =
+    loc.state === 'checking' || loc.state === 'locating' ? 'wait' : point && hasLocalRegion ? 'nearby' : point && primary ? 'download' : 'manual';
 
   // Odjazdy odświeżane co 30 s, gdy ekran jest widoczny.
   useFocusEffect(
@@ -81,8 +119,7 @@ export default function StartScreen() {
             setItems(r);
             setError(false);
           })
-          .catch(() => alive && setError(true))
-          .finally(() => alive && setRefreshing(false));
+          .catch(() => alive && setError(true));
       };
       run();
       const id = setInterval(run, 30_000);
@@ -98,63 +135,61 @@ export default function StartScreen() {
     setRefreshing(true);
     if (loc.state === 'ok') locate();
     setTick((x) => x + 1);
+    setTimeout(() => setRefreshing(false), 700);
   };
 
-  return (
-    <View style={s.screen}>
+  const header =
+    mode === 'manual' ? (
+      <PanoramaHeader region={manualRegion} height={64} style={{ paddingTop: insets.top + 12, paddingBottom: 40 }}>
+        <View style={s.headRow}>
+          <Logo />
+          {manualRegion ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('changeRegion')}
+              accessibilityState={{ expanded: pickRegion }}
+              onPress={() => setPickRegion((x) => !x)}
+              style={s.chip}>
+              <Icon name="pin" size={18} color={C.blue} stroke={2.2} />
+              <Txt w="extrabold" size={14} color={C.ink} numberOfLines={1} style={{ maxWidth: 140 }}>
+                {data.regionName(manualRegion)}
+              </Txt>
+              <Icon name="chevronD" size={16} color={C.muted} stroke={2.4} />
+            </Pressable>
+          ) : null}
+        </View>
+        <Txt w="black" size={29} color={C.ink} style={s.title}>
+          {t('manualTitle')}
+        </Txt>
+        <Txt w="bold" size={15} color={C.text2} style={s.sub}>
+          {t('manualSub')}
+        </Txt>
+      </PanoramaHeader>
+    ) : (
       <PanoramaHeader region={primary?.region} height={72} style={{ paddingTop: insets.top + 12 }}>
         <View style={s.headRow}>
           <Logo />
           <Pill icon="cloudCheck" text={t('offlineBadge')} />
         </View>
-        <Txt w="black" size={30} color={C.ink} style={s.title}>
+        <Txt w="black" size={30} color={C.ink} style={[s.title, { paddingBottom: 56 }]}>
           {t('nearbyTitle')}
         </Txt>
       </PanoramaHeader>
+    );
+
+  return (
+    <View style={s.screen}>
+      {header}
 
       <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        {loc.state === 'checking' || loc.state === 'locating' ? (
+        {mode === 'wait' ? (
           <View style={s.center}>
             <ActivityIndicator color={C.blue} />
             <Txt color={C.muted}>{t('locating')}</Txt>
           </View>
         ) : null}
 
-        {loc.state === 'ask' ? (
-          <Card style={s.gap}>
-            <View style={s.rowGap}>
-              <Icon name="pin" size={26} color={C.blue} />
-              <Txt w="black" size={22} color={C.ink}>
-                {t('locTitle')}
-              </Txt>
-            </View>
-            <Txt w="semibold" color={C.muted}>
-              {t('locBody')}
-            </Txt>
-            <Button title={t('locAllow')} icon="locate" onPress={askPermission} />
-            <Button title={t('locManual')} icon="bus" kind="outline" onPress={() => router.push('/przystanki')} />
-          </Card>
-        ) : null}
-
-        {loc.state === 'denied' ? (
-          <Card style={s.gap}>
-            <Txt w="bold" color={C.text2}>
-              {t('locDenied')}
-            </Txt>
-            <Button title={t('locManual')} icon="search" onPress={() => router.push('/przystanki')} />
-          </Card>
-        ) : null}
-
-        {point && candidates.length === 0 && data.manifest ? (
-          <Card style={s.gap}>
-            <Txt w="bold" color={C.text2}>
-              {t('regionOutside')}
-            </Txt>
-            <Button title={t('chooseRegion')} kind="outline" onPress={() => router.push('/profil')} />
-          </Card>
-        ) : null}
-
-        {point && primary && !hasLocalRegion ? (
+        {mode === 'download' && primary ? (
           <Card style={s.gap}>
             <Txt w="black" size={22} color={C.ink}>
               {t('regionDetected', { name: data.regionName(primary.region) })}
@@ -171,58 +206,105 @@ export default function StartScreen() {
           </Card>
         ) : null}
 
-        {point && hasLocalRegion && items ? (
+        {mode === 'nearby' && items ? (
           <>
-            <View style={s.listHead}>
-              <Txt w="black" size={19} color={C.ink}>
-                {t('tabStops')}
-              </Txt>
-              <Txt w="bold" size={13} color={C.muted}>
-                {t('nearbyNow', { time: hhmm(now.sec) })}
-              </Txt>
-            </View>
+            <SectionTitle text={t('tabStops')} right={t('nearbyNow', { time: hhmm(now.sec) })} />
             {items.length === 0 ? <Txt color={C.muted}>{t('noStopsNearby')}</Txt> : null}
             {items.map((st) => {
               const n = stationNames(st);
               return (
-                <Pressable
+                <StationCard
                   key={`${st.region}:${st.id}`}
-                  accessibilityRole="button"
-                  onPress={() => router.push({ pathname: '/stop/[region]/[station]', params: { region: st.region, station: String(st.id) } })}
-                  style={({ pressed }) => [s.stationCard, pressed && { opacity: 0.8 }]}>
-                  <View style={s.rowGap}>
-                    <View style={s.stationIcon}>
-                      <Icon name="bus" size={20} color="#FFFFFF" stroke={2.2} />
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Txt w="extrabold" size={17} color={C.ink} numberOfLines={1}>
-                        {n.main}
-                      </Txt>
-                      {n.sub ? (
-                        <Txt w="semibold" size={13} color={C.muted} numberOfLines={1}>
-                          {n.sub}
-                        </Txt>
-                      ) : null}
-                    </View>
+                  region={st.region}
+                  station={st.id}
+                  title={n.main}
+                  sub={n.sub}
+                  departures={st.departures}
+                  nowSec={now.sec}
+                  emptyText={t('noDeparturesSoon')}
+                  right={
                     <View style={s.walk}>
                       <Icon name="walk" size={18} color={C.text2} />
                       <Txt w="extrabold" size={14} color={C.text2}>
                         {t('walkMin', { min: walkMinutes(st.dist) })}
                       </Txt>
                     </View>
-                  </View>
-                  {st.departures.length === 0 ? (
-                    <Txt w="semibold" size={14} color={C.muted}>
-                      {t('noDeparturesSoon')}
-                    </Txt>
-                  ) : (
-                    st.departures.map((d) => <DepartureRow key={`${d.dayOffset}:${d.tripId}`} d={d} nowSec={now.sec} />)
-                  )}
-                </Pressable>
+                  }
+                />
               );
             })}
           </>
         ) : null}
+
+        {mode === 'manual' ? (
+          <>
+            {manualRegion ? (
+              <Pressable
+                accessibilityRole="search"
+                onPress={() => router.push({ pathname: '/przystanki', params: { focus: '1' } })}
+                style={s.search}>
+                <Icon name="search" size={22} color={C.muted} stroke={2.2} />
+                <Txt w="bold" size={16} color="#7A849E">
+                  {t('searchPlaceholder')}
+                </Txt>
+              </Pressable>
+            ) : null}
+
+            {pickRegion && manualRegion ? (
+              <View style={s.pickCard}>
+                {installedRegions.map((r) => (
+                  <Pressable
+                    key={r}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: r === manualRegion }}
+                    onPress={() => {
+                      setHomeRegion(r);
+                      setPickRegion(false);
+                    }}
+                    style={[s.pickRow, r === manualRegion && { backgroundColor: C.sky }]}>
+                    <Txt w="extrabold" size={16} color={C.ink} style={{ flex: 1 }}>
+                      {data.regionName(r)}
+                    </Txt>
+                    {r === manualRegion ? <Icon name="check" size={20} color={C.blue} stroke={2.6} /> : null}
+                  </Pressable>
+                ))}
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setPickRegion(false);
+                    router.push('/profil');
+                  }}
+                  style={s.pickRow}>
+                  <Txt w="extrabold" size={16} color={C.blue} style={{ flex: 1 }}>
+                    {t('otherRegion')}
+                  </Txt>
+                  <Icon name="chevronR" size={18} color={C.blue} stroke={2.4} />
+                </Pressable>
+              </View>
+            ) : null}
+
+            {outside && manualRegion ? (
+              <Txt w="bold" size={14} color={C.text2} style={{ paddingHorizontal: 4 }}>
+                {t('outsideShowing', { name: data.regionName(manualRegion) })}
+              </Txt>
+            ) : null}
+
+            {!manualRegion ? (
+              <Card style={s.gap}>
+                <Txt w="bold" color={C.text2}>
+                  {outside ? t('regionOutside') : t('noRegionYet')}
+                </Txt>
+                <Button title={t('chooseRegion')} icon="download" onPress={() => router.push('/profil')} />
+              </Card>
+            ) : null}
+          </>
+        ) : null}
+
+        <FavoritesSection tick={tick} />
+
+        {mode === 'manual' && manualRegion ? <PopularSection region={manualRegion} /> : null}
+
+        {mode === 'manual' && loc.state === 'off' ? <EnableLocationCard canAsk={loc.canAsk && !loc.gps} onPress={enableLocation} /> : null}
 
         {error ? (
           <Txt color={C.orangeText} style={s.gap}>
@@ -236,14 +318,34 @@ export default function StartScreen() {
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
-  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20 },
-  title: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 56, lineHeight: 34 },
+  headRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, gap: 12 },
+  title: { paddingHorizontal: 20, paddingTop: 12, lineHeight: 34 },
+  sub: { paddingHorizontal: 20, paddingTop: 4, lineHeight: 21 },
   body: { padding: 16, gap: 12, paddingBottom: 32 },
   center: { alignItems: 'center', gap: 8, paddingVertical: 24 },
   gap: { gap: 12 },
-  rowGap: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  listHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', paddingHorizontal: 4 },
-  stationCard: { backgroundColor: '#FFFFFF', borderRadius: 18, padding: 12, gap: 6, borderWidth: 1, borderColor: C.line },
-  stationIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   walk: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 36,
+    paddingLeft: 10,
+    paddingRight: 12,
+    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    ...shadow,
+  },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: 52,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    ...shadow,
+  },
+  pickCard: { backgroundColor: '#FFFFFF', borderRadius: 18, overflow: 'hidden', ...shadow },
+  pickRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 50, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
 });

@@ -1,13 +1,47 @@
 // Najbliższe stacje z odjazdami – z kilku paczek naraz (region + kolej/promy, jeśli są w telefonie).
+import Storage from 'expo-sqlite/kv-store';
+
 import { getLang } from '@/i18n';
 import type { LatLon } from '@/lib/geo';
+import type { Favorite } from '@/lib/settings';
 import type { Now } from '@/lib/time';
 
 import { OVERLAY_REGIONS } from './DataContext';
-import { openRegion } from './packages';
-import { nearbyStations, stationDepartures, type Departure, type NearbyStation } from './queries';
+import { listInstalled, openRegion } from './packages';
+import { nearbyStations, popularStations, stationDepartures, type Departure, type NearbyStation, type Station } from './queries';
 
 export type StationWithDeps = NearbyStation & { region: string; departures: Departure[] };
+
+/** Popularne przystanki regionu – liczone raz na wersję paczki (duże regiony, np. Ateny, liczą się kilka sekund). */
+export async function loadPopular(region: string): Promise<Station[]> {
+  const version = listInstalled()[region]?.version ?? '';
+  const key = `cache.popular.v1.${region}`;
+  try {
+    const cached = JSON.parse(Storage.getItemSync(key) ?? 'null') as { version: string; list: Station[] } | null;
+    if (cached && cached.version === version && Array.isArray(cached.list)) return cached.list;
+  } catch {
+    // uszkodzony wpis – policz od nowa
+  }
+  const { db } = await openRegion(region);
+  const list = await popularStations(db);
+  Storage.setItemSync(key, JSON.stringify({ version, list }));
+  return list;
+}
+
+/** Najbliższe odjazdy z ulubionych przystanków (tylko z regionów w telefonie). */
+export async function loadFavoriteDepartures(favs: Favorite[], now: Now, perStation = 2, windowMin = 180): Promise<Record<string, Departure[]>> {
+  const out: Record<string, Departure[]> = {};
+  for (const f of favs) {
+    try {
+      const { db, cal } = await openRegion(f.region);
+      const deps = await stationDepartures(db, cal, f.station, now, now.sec - 60, now.sec + windowMin * 60);
+      out[`${f.region}:${f.station}`] = deps.filter((d) => d.dep >= now.sec - 30).slice(0, perStation);
+    } catch {
+      out[`${f.region}:${f.station}`] = [];
+    }
+  }
+  return out;
+}
 
 /** Nazwa do wyświetlenia: łacińska (name_en), chyba że język grecki albo brak tłumaczenia. */
 export function stationNames(st: { name: string; name_en: string }): { main: string; sub: string | null } {

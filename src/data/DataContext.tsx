@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 
 import { getLang } from '@/i18n';
 import { bboxArea, inBbox, type LatLon } from '@/lib/geo';
+import { getSettings, setHomeRegion } from '@/lib/settings';
 
 import {
   cachedManifest,
@@ -70,7 +71,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setBusy((b) => ({ ...b, [region]: true }));
       try {
         await installPackage(pkg, manifest.schema);
-        setInstalled(listInstalled());
+        const all = listInstalled();
+        setInstalled(all);
+        // Pierwszy pobrany region staje się „domowym” dla ekranu Start bez lokalizacji.
+        const home = getSettings().homeRegion;
+        if (!OVERLAY_REGIONS.has(region) && (!home || !all[home])) setHomeRegion(region);
       } finally {
         setBusy((b) => ({ ...b, [region]: false }));
       }
@@ -80,7 +85,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const remove = useCallback(async (region: string) => {
     await removePackage(region);
-    setInstalled(listInstalled());
+    const all = listInstalled();
+    setInstalled(all);
+    if (getSettings().homeRegion === region) {
+      setHomeRegion(Object.keys(all).find((r) => !OVERLAY_REGIONS.has(r)) ?? null);
+    }
   }, []);
 
   const value = useMemo<DataState>(() => {

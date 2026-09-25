@@ -5,60 +5,20 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
+import { RegionList } from '@/components/RegionList';
 import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
-import type { PackageInfo } from '@/data/packages';
 import { hasTranslation, LANGS, setLang, t, useLang } from '@/i18n';
 import { formatDate } from '@/lib/time';
-
-const mb = (bytes: number) => (bytes / 1e6 < 0.1 ? '<0,1' : (bytes / 1e6).toFixed(1).replace('.', ','));
 
 export default function ProfileScreen() {
   const lang = useLang();
   const insets = useSafeAreaInsets();
   const data = useData();
   const [showLangs, setShowLangs] = useState(false);
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
 
-  const pkgs = new Map((data.manifest?.packages ?? []).map((p) => [p.region, p]));
   const installed = Object.values(data.installed).sort((a, b) => data.regionName(a.region).localeCompare(data.regionName(b.region)));
-
-  // Grupy z regions.json; paczki spoza listy (np. kolej, promy) trafiają do „Inne”.
-  const listed = new Set<string>();
-  const groups = (data.groups ?? []).map((g) => {
-    const items = g.regions.filter((r) => pkgs.has(r.id)).map((r) => pkgs.get(r.id)!);
-    items.forEach((p) => listed.add(p.region));
-    return { id: g.id, name: lang === 'pl' || lang === 'el' ? g.name[lang] : g.name.en, items };
-  });
-  const rest = [...pkgs.values()].filter((p) => !listed.has(p.region));
-  if (rest.length) groups.push({ id: '_other', name: 'Inne / Other', items: rest });
-
-  const row = (p: PackageInfo) => {
-    const inst = data.installed[p.region];
-    const busy = data.busy[p.region];
-    return (
-      <View key={p.region} style={s.regionRow}>
-        <View style={{ flex: 1 }}>
-          <Txt w="extrabold" size={16} color={C.ink}>
-            {data.regionName(p.region)}
-          </Txt>
-          <Txt w="bold" size={13} color={C.muted}>
-            {[t('validTo', { date: formatDate(Number(p.valid_to)) }), t('sizeMb', { mb: mb(p.bytes) })].join(' · ')}
-          </Txt>
-        </View>
-        {busy ? (
-          <ActivityIndicator color={C.blue} />
-        ) : inst ? (
-          <Icon name="check" size={22} color={C.green} stroke={2.6} />
-        ) : (
-          <Pressable accessibilityRole="button" accessibilityLabel={`${t('download')} ${data.regionName(p.region)}`} onPress={() => data.install(p.region)} style={s.dl}>
-            <Icon name="download" size={20} color={C.blue} stroke={2.4} />
-          </Pressable>
-        )}
-      </View>
-    );
-  };
 
   return (
     <View style={s.screen}>
@@ -135,7 +95,7 @@ export default function ProfileScreen() {
                 {data.busy[i.region] ? (
                   <ActivityIndicator color={C.blue} />
                 ) : data.hasUpdate(i.region) ? (
-                  <Pressable accessibilityRole="button" onPress={() => data.install(i.region)} style={s.dl}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`${t('update')} ${data.regionName(i.region)}`} onPress={() => data.install(i.region)} style={s.dl}>
                     <Icon name="refresh" size={20} color={C.blue} stroke={2.4} />
                   </Pressable>
                 ) : null}
@@ -152,20 +112,19 @@ export default function ProfileScreen() {
             <Txt w="black" size={13} color={C.muted} style={s.cardLabel}>
               {t('available')}
             </Txt>
-            {groups.map((g) => (
-              <View key={g.id}>
-                <Pressable accessibilityRole="button" onPress={() => setOpenGroup((x) => (x === g.id ? null : g.id))} style={s.groupRow}>
-                  <Txt w="black" size={15} color={C.ink} style={{ flex: 1 }}>
-                    {g.name}
-                  </Txt>
-                  <Txt w="bold" size={13} color={C.muted}>
-                    {g.items.length}
-                  </Txt>
-                  <Icon name={openGroup === g.id ? 'chevronL' : 'chevronR'} size={18} color={C.faint} />
-                </Pressable>
-                {openGroup === g.id ? g.items.map(row) : null}
-              </View>
-            ))}
+            <RegionList
+              right={(p) =>
+                data.busy[p.region] ? (
+                  <ActivityIndicator color={C.blue} />
+                ) : data.installed[p.region] ? (
+                  <Icon name="check" size={22} color={C.green} stroke={2.6} />
+                ) : (
+                  <Pressable accessibilityRole="button" accessibilityLabel={`${t('download')} ${data.regionName(p.region)}`} onPress={() => data.install(p.region)} style={s.dl}>
+                    <Icon name="download" size={20} color={C.blue} stroke={2.4} />
+                  </Pressable>
+                )
+              }
+            />
           </View>
         ) : null}
 
@@ -189,7 +148,6 @@ const s = StyleSheet.create({
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 16 },
   langRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 46, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: C.lineSoft },
   regionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 60, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
-  groupRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
   dl: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   del: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
 });
