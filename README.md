@@ -19,23 +19,46 @@ Telefon i komputer muszą być w tej samej sieci Wi-Fi.
 
    Wypisze adres, np. `EXPO_PUBLIC_DATA_URL=http://192.168.1.87:8787`. Wpisz tę linię do pliku `.env.local`
    (wzór: `.env.example`). Adres zmienia się tylko wtedy, gdy komputer dostanie inny adres w sieci.
-4. Terminal 2 – aplikacja:
+4. Terminal 2 – aplikacja w Expo Go:
 
    ```bash
-   npm start
+   npm run go
    ```
 
    Zeskanuj kod QR: Android – w Expo Go, iPhone – aparatem.
 
 Przy pierwszym uruchomieniu Windows może zapytać o dostęp Node.js do sieci – zezwól dla **sieci prywatnych**.
 
-Mapa (MapLibre) będzie wymagała własnej wersji testowej (development build) – Expo Go jej nie obsługuje.
+Expo Go nie ma mapy (MapLibre) – zakładka Przystanki → Mapa pokazuje wtedy komunikat. Mapa działa w wersji testowej.
+
+## Wersja testowa z mapą (Android, development build)
+
+Budowana w chmurze Expo (EAS) na koncie Michała. Raz na początku:
+
+```bash
+npx eas-cli@latest login
+```
+
+```bash
+npx eas-cli@latest init
+```
+
+Budowa (ok. 15–30 min w darmowej kolejce; powtarzać tylko po dodaniu nowych modułów natywnych):
+
+```bash
+npm run build:test
+```
+
+Na końcu pojawi się kod QR / link do pliku APK – otwórz go na telefonie i zainstaluj „OpaBus”.
+Potem na co dzień: `npm run dane` + `npm start` (bez `--go`) i zeskanuj kod QR aplikacją OpaBus.
 
 ## Polecenia
 
 | Polecenie | Co robi |
 | --- | --- |
-| `npm start` | serwer Expo (kod QR dla telefonu) |
+| `npm start` | serwer Expo dla wersji testowej OpaBus (z mapą) |
+| `npm run go` | serwer Expo dla Expo Go (bez mapy) |
+| `npm run build:test` | budowa wersji testowej na Androida w chmurze Expo |
 | `npm run dane` | lokalny serwer paczek z rozkładami (`strona-opabus/public`) |
 | `npm run typecheck` | sprawdzenie typów TypeScript |
 | `npm run lint` | ESLint |

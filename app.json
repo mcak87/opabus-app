@@ -62,7 +62,8 @@
       ],
       "expo-sqlite",
       "expo-localization",
-      "expo-font"
+      "expo-font",
+      "@maplibre/maplibre-react-native"
     ],
     "experiments": {
       "typedRoutes": true,

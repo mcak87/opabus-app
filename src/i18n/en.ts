@@ -57,6 +57,13 @@ export const en: Record<keyof typeof pl, string> = {
   favRemove: 'Remove from favourites',
   favHint: 'Tap the star on a stop screen to add it here.',
 
+  viewList: 'List',
+  viewMap: 'Map',
+  mapNeedsBuild: 'The map works in the OpaBus test build. Expo Go does not include it – you can check the rest of the app here.',
+  mapZoomIn: 'Zoom in to see the stops',
+  myLocation: 'My location',
+  close: 'Close',
+
   regionDetected: 'Opa! You are in {name}',
   regionDownloadBody: 'Download the timetables – they work without internet.',
   regionDownload: 'Download {name}',

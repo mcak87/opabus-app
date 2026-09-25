@@ -84,6 +84,17 @@ export async function nearbyStations(db: Db, lat: number, lon: number, maxM = 80
     .slice(0, limit);
 }
 
+/** Stacje w prostokącie (widoczny fragment mapy). */
+export async function stationsInBox(db: Db, south: number, west: number, north: number, east: number, limit = 600): Promise<Station[]> {
+  return db.all<Station>('SELECT id, name, name_en, lat, lon FROM stations WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ? LIMIT ?', [
+    south,
+    north,
+    west,
+    east,
+    limit,
+  ]);
+}
+
 /**
  * Węzły regionu: przystanki z największą liczbą linii (potem kursów), rozrzucone po różnych miejscowościach
  * (min. odstęp w metrach). Liczba linii, a nie kursów – inaczej wygrywa jedna częsta linia miejska.

@@ -56,6 +56,13 @@ export const pl = {
   favRemove: 'Usuń z ulubionych',
   favHint: 'Dotknij gwiazdki na ekranie przystanku, żeby dodać go tutaj.',
 
+  viewList: 'Lista',
+  viewMap: 'Mapa',
+  mapNeedsBuild: 'Mapa działa w wersji testowej OpaBus. W Expo Go jej nie ma – tu sprawdzisz resztę aplikacji.',
+  mapZoomIn: 'Przybliż mapę, żeby zobaczyć przystanki',
+  myLocation: 'Moja lokalizacja',
+  close: 'Zamknij',
+
   regionDetected: 'Opa! Jesteś w regionie {name}',
   regionDownloadBody: 'Pobierz rozkłady – będą działać bez internetu.',
   regionDownload: 'Pobierz {name}',

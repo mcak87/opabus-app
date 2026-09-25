@@ -5,9 +5,11 @@
   "dependencies": {
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/ui": "~57.0.20",
+    "@maplibre/maplibre-react-native": "^11.4.0",
     "expo": "~57.0.25",
     "expo-constants": "~57.0.19",
     "expo-crypto": "~57.0.3",
+    "expo-dev-client": "~57.0.19",
     "expo-device": "~57.0.2",
     "expo-file-system": "~57.0.7",
     "expo-font": "~57.0.4",
@@ -36,6 +38,7 @@
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
+    "@types/geojson": "^7946.0.16",
     "@types/react": "~19.2.2",
     "eslint": "^9.0.0",
     "eslint-config-expo": "~57.0.2",
@@ -43,13 +46,15 @@
   },
   "scripts": {
     "start": "expo start",
+    "go": "expo start --go",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
+    "typecheck": "tsc --noEmit",
     "dane": "node scripts/serve-data.mjs",
     "test:dane": "node scripts/test-queries.ts",
-    "typecheck": "tsc --noEmit"
+    "build:test": "npx eas-cli@latest build --profile development --platform android"
   },
   "private": true
 }
