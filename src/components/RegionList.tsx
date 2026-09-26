@@ -11,7 +11,9 @@ import { formatDate } from '@/lib/time';
 import { Icon } from './Icon';
 import { Txt } from './ui';
 
-export const mb = (bytes: number) => (bytes / 1e6 < 0.1 ? '<0,1' : (bytes / 1e6).toFixed(1).replace('.', ','));
+/** Rozmiar paczki: „89 KB”, „1,4 MB”. */
+export const fileSize = (bytes: number) =>
+  bytes < 1e6 ? `${Math.max(1, Math.round(bytes / 1e3))} KB` : `${(bytes / 1e6).toFixed(1).replace('.', ',')} MB`;
 
 export function RegionList({
   right,
@@ -72,7 +74,7 @@ export function RegionList({
                         {data.regionName(p.region)}
                       </Txt>
                       <Txt w="bold" size={13} color={C.muted}>
-                        {[t('validTo', { date: formatDate(Number(p.valid_to)) }), t('sizeMb', { mb: mb(p.bytes) })].join(' · ')}
+                        {[t('validTo', { date: formatDate(Number(p.valid_to)) }), fileSize(p.bytes)].join(' · ')}
                       </Txt>
                     </View>
                     {right(p)}

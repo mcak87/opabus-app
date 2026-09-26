@@ -11,6 +11,7 @@ import { Logo } from '@/components/Logo';
 import { Button, Pill, Txt } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { t, useLang } from '@/i18n';
+import { POSITION_OPTIONS } from '@/lib/position';
 
 // Ilustracja: fragment mapy, pinezka „tu jesteś” i przystanek autobusowy.
 const MAP = `<svg viewBox="0 0 390 360" xmlns="http://www.w3.org/2000/svg">
@@ -32,7 +33,7 @@ async function currentPosition(): Promise<{ lat: number; lon: number } | null> {
   const last = await Location.getLastKnownPositionAsync({ maxAge: 10 * 60_000 }).catch(() => null);
   if (last) return { lat: last.coords.latitude, lon: last.coords.longitude };
   const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
-  const cur = await Promise.race([Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null), timeout]);
+  const cur = await Promise.race([Location.getCurrentPositionAsync(POSITION_OPTIONS).catch(() => null), timeout]);
   return cur ? { lat: cur.coords.latitude, lon: cur.coords.longitude } : null;
 }
 

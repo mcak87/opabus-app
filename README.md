@@ -55,8 +55,13 @@ Potem na co dzień: `npm run dane` + `npm start` (bez `--go`) i zeskanuj kod QR 
 ## Budowanie na komputerze (Android Studio)
 
 Szybciej niż w chmurze (pierwszy raz 10–20 min, potem 1–3 min). Wymaga Android Studio z dokończonym kreatorem
-(„Standard” – pobiera Android SDK i emulator). Zmiennych systemowych Windows nie trzeba ustawiać –
-`scripts/with-android.mjs` wskazuje SDK i Javę z Android Studio tylko na czas polecenia.
+(„Standard” – pobiera Android SDK i emulator) oraz Javy 17 w `%LOCALAPPDATA%\OpaBus\jdk-17`
+(Microsoft Build of OpenJDK 17 z paczki zip) – Java 25 dołączona do Android Studio psuje budowanie modułów
+React Native (krok „prefab” w CMake). Zmiennych systemowych Windows nie trzeba ustawiać –
+`scripts/with-android.mjs` wskazuje SDK i Javę tylko na czas polecenia.
+
+Emulator na komputerze: pozycję testową ustawia się w Android Studio (Extended Controls → Location) albo
+`adb shell cmd location providers set-test-provider-location gps --location 36.3406,28.2006` (Faliraki).
 
 ```bash
 npm run emulator

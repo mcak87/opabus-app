@@ -7,7 +7,9 @@ import { join } from 'node:path';
 
 const env = { ...process.env };
 const sdk = env.ANDROID_HOME || join(env.LOCALAPPDATA ?? '', 'Android', 'Sdk');
-const jbr = env.JAVA_HOME || 'C:\\Program Files\\Android\\Android Studio\\jbr';
+// Java 17 do budowania (React Native): Java 25 z Android Studio psuje krok „prefab” w CMake (ostrzeżenie JVM na stderr).
+const jdk17 = join(env.LOCALAPPDATA ?? '', 'OpaBus', 'jdk-17');
+const jbr = env.JAVA_HOME || (existsSync(join(jdk17, 'bin')) ? jdk17 : 'C:\\Program Files\\Android\\Android Studio\\jbr');
 
 if (!existsSync(sdk)) {
   console.error(`Brak Android SDK w ${sdk}.\nOtwórz Android Studio i dokończ kreator pierwszego uruchomienia (typ instalacji: Standard).`);

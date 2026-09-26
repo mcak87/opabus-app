@@ -15,6 +15,7 @@ import { C, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { loadNearby, stationNames, type StationWithDeps } from '@/data/nearby';
 import { t, useLang } from '@/i18n';
+import { POSITION_OPTIONS } from '@/lib/position';
 import { walkMinutes, type LatLon } from '@/lib/geo';
 import { setHomeRegion, useSettings } from '@/lib/settings';
 import { athensNow, hhmm } from '@/lib/time';
@@ -44,7 +45,7 @@ export default function StartScreen() {
     const last = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60_000 }).catch(() => null);
     if (last) setLoc({ state: 'ok', p: { lat: last.coords.latitude, lon: last.coords.longitude } });
     try {
-      const cur = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const cur = await Location.getCurrentPositionAsync(POSITION_OPTIONS);
       setLoc({ state: 'ok', p: { lat: cur.coords.latitude, lon: cur.coords.longitude } });
     } catch {
       if (!last) setLoc({ state: 'off', canAsk: true, gps: true });
@@ -210,6 +211,8 @@ export default function StartScreen() {
           <>
             <SectionTitle text={t('tabStops')} right={t('nearbyNow', { time: hhmm(now.sec) })} />
             {items.length === 0 ? <Txt color={C.muted}>{t('noStopsNearby')}</Txt> : null}
+            {/* Nic w pobliżu (np. hotel poza trasami autobusów) – podpowiadamy węzły regionu. */}
+            {items.length === 0 && primary ? <PopularSection region={primary.region} /> : null}
             {items.map((st) => {
               const n = stationNames(st);
               return (

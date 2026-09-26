@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
-import { mb, RegionList } from '@/components/RegionList';
+import { fileSize, RegionList } from '@/components/RegionList';
 import { Button, PanoramaHeader, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
@@ -106,7 +106,7 @@ export default function RegionStep() {
               <View style={s.stats}>
                 <Stat value={String(detected.routes)} label={t('statLines')} />
                 <Stat value={String(detected.stations)} label={t('statStops')} />
-                <Stat value={mb(detected.bytes)} label={t('statMb')} />
+                <Stat value={fileSize(detected.bytes)} label={t('statDownload')} />
               </View>
               <View style={s.row}>
                 <Icon name="bus" size={20} color={C.blue} />

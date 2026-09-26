@@ -23,6 +23,7 @@ import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { stationDepartures, stationsInBox, type Departure, type Station } from '@/data/queries';
 import { t } from '@/i18n';
+import { POSITION_OPTIONS } from '@/lib/position';
 import { getSettings } from '@/lib/settings';
 import { athensNow } from '@/lib/time';
 
@@ -131,7 +132,7 @@ export default function StopsMap() {
     setHasLoc(true);
     const pos =
       (await Location.getLastKnownPositionAsync({ maxAge: 60_000 }).catch(() => null)) ??
-      (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).catch(() => null));
+      (await Location.getCurrentPositionAsync(POSITION_OPTIONS).catch(() => null));
     if (pos) camera.current?.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 15, duration: 700 });
   };
 
