@@ -52,6 +52,24 @@ npm run build:test
 Na końcu pojawi się kod QR / link do pliku APK – otwórz go na telefonie i zainstaluj „OpaBus”.
 Potem na co dzień: `npm run dane` + `npm start` (bez `--go`) i zeskanuj kod QR aplikacją OpaBus.
 
+## Budowanie na komputerze (Android Studio)
+
+Szybciej niż w chmurze (pierwszy raz 10–20 min, potem 1–3 min). Wymaga Android Studio z dokończonym kreatorem
+(„Standard” – pobiera Android SDK i emulator). Zmiennych systemowych Windows nie trzeba ustawiać –
+`scripts/with-android.mjs` wskazuje SDK i Javę z Android Studio tylko na czas polecenia.
+
+```bash
+npm run emulator
+```
+
+```bash
+npm run android:local
+```
+
+Pierwsze polecenie włącza emulator telefonu (utworzony w Android Studio → Virtual Device Manager), drugie buduje
+wersję testową, instaluje ją na emulatorze lub telefonie podłączonym kablem USB (z włączonym debugowaniem USB)
+i uruchamia serwer Expo. Folder `android/` powstaje automatycznie – nie edytujemy go ręcznie.
+
 ## Polecenia
 
 | Polecenie | Co robi |
@@ -59,6 +77,8 @@ Potem na co dzień: `npm run dane` + `npm start` (bez `--go`) i zeskanuj kod QR 
 | `npm start` | serwer Expo dla wersji testowej OpaBus (z mapą) |
 | `npm run go` | serwer Expo dla Expo Go (bez mapy) |
 | `npm run build:test` | budowa wersji testowej na Androida w chmurze Expo |
+| `npm run android:local` | budowa i instalacja wersji testowej na komputerze (Android Studio) |
+| `npm run emulator` | włącza emulator telefonu z Android Studio |
 | `npm run dane` | lokalny serwer paczek z rozkładami (`strona-opabus/public`) |
 | `npm run typecheck` | sprawdzenie typów TypeScript |
 | `npm run lint` | ESLint |
