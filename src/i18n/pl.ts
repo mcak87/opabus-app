@@ -61,6 +61,8 @@ export const pl = {
   mapNeedsBuild: 'Mapa działa w wersji testowej OpaBus. W Expo Go jej nie ma – tu sprawdzisz resztę aplikacji.',
   mapZoomIn: 'Przybliż mapę, żeby zobaczyć przystanki',
   myLocation: 'Moja lokalizacja',
+  zoomIn: 'Przybliż mapę',
+  zoomOut: 'Oddal mapę',
   close: 'Zamknij',
 
   regionDetected: 'Opa! Jesteś w regionie {name}',

@@ -35,6 +35,8 @@ import { Txt } from './ui';
 export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 /** Poniżej tego przybliżenia nie rysujemy przystanków (za dużo punktów). */
 const MIN_ZOOM_STOPS = 12.5;
+const MIN_ZOOM = 5;
+const MAX_ZOOM = 18;
 const GREECE: InitialViewState = { center: [23.7, 38.4], zoom: 5.6 };
 
 type Pin = Station & { region: string };
@@ -58,7 +60,12 @@ export default function StopsMap() {
     let alive = true;
     (async () => {
       const perm = await Location.getForegroundPermissionsAsync();
-      const last = perm.granted ? await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null) : null;
+      // Ostatnia znana pozycja, a gdy jej brak – bieżąca (maks. 4 s, żeby mapa nie czekała długo).
+      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
+      const last = perm.granted
+        ? ((await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null)) ??
+          (await Promise.race([Location.getCurrentPositionAsync(POSITION_OPTIONS).catch(() => null), timeout])))
+        : null;
       const pkgs = (data.manifest?.packages ?? []).filter((p) => data.installed[p.region]);
       let view: InitialViewState = GREECE;
       if (last && pkgs.some((p) => inside(p.bbox, last.coords.latitude, last.coords.longitude))) {
@@ -136,6 +143,13 @@ export default function StopsMap() {
     if (pos) camera.current?.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 15, duration: 700 });
   };
 
+  // Przyciski +/− (nie każdy umie „szczypać” mapę dwoma palcami).
+  const zoomBy = async (delta: number) => {
+    const z = await map.current?.getZoom();
+    if (z == null) return;
+    camera.current?.zoomTo(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z + delta)), { duration: 250 });
+  };
+
   if (!initial) return <View style={s.fill} />;
 
   const features: GeoJSON.FeatureCollection = {
@@ -156,11 +170,11 @@ export default function StopsMap() {
         mapStyle={MAP_STYLE}
         logo={false}
         attributionPosition={{ top: 8, left: 8 }}
-        compassPosition={{ top: 64, right: 12 }}
+        compassPosition={{ top: 52, left: 10 }}
         touchPitch={false}
         onPress={onPress}
         onRegionDidChange={onRegionDidChange}>
-        <Camera ref={camera} initialViewState={initial} minZoom={5} maxZoom={18} />
+        <Camera ref={camera} initialViewState={initial} minZoom={MIN_ZOOM} maxZoom={MAX_ZOOM} />
         <GeoJSONSource id="stations" data={features}>
           <Layer
             type="circle"
@@ -198,6 +212,16 @@ export default function StopsMap() {
       <Pressable accessibilityRole="button" accessibilityLabel={t('myLocation')} onPress={locate} style={s.locate}>
         <Icon name="locate" size={22} color={C.blue} stroke={2.2} />
       </Pressable>
+
+      <View style={s.zoom}>
+        <Pressable accessibilityRole="button" accessibilityLabel={t('zoomIn')} onPress={() => zoomBy(1)} style={s.zoomBtn}>
+          <Icon name="plus" size={22} color={C.ink} stroke={2.4} />
+        </Pressable>
+        <View style={s.zoomLine} />
+        <Pressable accessibilityRole="button" accessibilityLabel={t('zoomOut')} onPress={() => zoomBy(-1)} style={s.zoomBtn}>
+          <Icon name="minus" size={22} color={C.ink} stroke={2.4} />
+        </Pressable>
+      </View>
 
       {zoomedOut ? (
         <View pointerEvents="none" style={s.hint}>
@@ -247,10 +271,13 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     ...shadow,
   },
+  zoom: { position: 'absolute', right: 12, top: 68, width: 44, borderRadius: 22, backgroundColor: '#FFFFFF', overflow: 'hidden', ...shadow },
+  zoomBtn: { height: 44, alignItems: 'center', justifyContent: 'center' },
+  zoomLine: { height: 1, marginHorizontal: 8, backgroundColor: C.line },
   hint: {
     position: 'absolute',
     alignSelf: 'center',
-    top: 14,
+    bottom: 20,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     paddingHorizontal: 12,

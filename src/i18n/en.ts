@@ -62,6 +62,8 @@ export const en: Record<keyof typeof pl, string> = {
   mapNeedsBuild: 'The map works in the OpaBus test build. Expo Go does not include it – you can check the rest of the app here.',
   mapZoomIn: 'Zoom in to see the stops',
   myLocation: 'My location',
+  zoomIn: 'Zoom in',
+  zoomOut: 'Zoom out',
   close: 'Close',
 
   regionDetected: 'Opa! You are in {name}',
