@@ -63,6 +63,12 @@ export const pl = {
   myLocation: 'Moja lokalizacja',
   zoomIn: 'Przybliż mapę',
   zoomOut: 'Oddal mapę',
+  mapOfflineGet: 'Mapa offline · ok. {size}',
+  mapDownloading: 'Pobieranie mapy… {pct}% · {size}',
+  mapReady: 'Mapa offline · {size}',
+  mapError: 'Nie udało się pobrać mapy',
+  mapDownload: 'Pobierz mapę offline',
+  mapRemove: 'Usuń mapę offline',
   close: 'Zamknij',
 
   regionDetected: 'Opa! Jesteś w regionie {name}',

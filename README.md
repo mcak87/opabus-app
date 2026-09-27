@@ -17,8 +17,9 @@ Telefon i komputer muszą być w tej samej sieci Wi-Fi.
    npm run dane
    ```
 
-   Wypisze adres, np. `EXPO_PUBLIC_DATA_URL=http://192.168.1.87:8787`. Wpisz tę linię do pliku `.env.local`
-   (wzór: `.env.example`). Adres zmienia się tylko wtedy, gdy komputer dostanie inny adres w sieci.
+   Aplikacja w trybie testowym sama znajdzie ten serwer (ten sam komputer co serwer Expo, port 8787) –
+   niczego nie trzeba wpisywać, nawet gdy komputer dostanie w Wi-Fi inny adres. Na emulatorze potrzebne jest
+   `adb reverse tcp:8787 tcp:8787`.
 4. Terminal 2 – aplikacja w Expo Go:
 
    ```bash

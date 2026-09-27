@@ -1,7 +1,7 @@
 // Powitanie, krok 3: wykryty region (projekt: canvas „Region”) albo wybór z listy.
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
@@ -10,6 +10,7 @@ import { fileSize, RegionList } from '@/components/RegionList';
 import { Button, PanoramaHeader, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
+import { downloadMap, estimateMapBytes, MAPS_SUPPORTED, useMapPacks } from '@/data/offlineMaps';
 import type { PackageInfo } from '@/data/packages';
 import { getLang, t, useLang } from '@/i18n';
 import { setHomeRegion, setOnboarded } from '@/lib/settings';
@@ -22,6 +23,8 @@ export default function RegionStep() {
   const params = useLocalSearchParams<{ lat?: string; lon?: string }>();
   const [choosing, setChoosing] = useState(false);
   const [error, setError] = useState(false);
+  const [withMap, setWithMap] = useState(MAPS_SUPPORTED);
+  const mapPacks = useMapPacks();
 
   const p = params.lat && params.lon ? { lat: Number(params.lat), lon: Number(params.lon) } : null;
   const detected = p ? data.regionsAt(p)[0] : undefined;
@@ -31,7 +34,8 @@ export default function RegionStep() {
   const start = async (pkg: PackageInfo) => {
     setError(false);
     try {
-      if (!data.installed[pkg.region]) await data.install(pkg.region);
+      if (!data.installed[pkg.region]) await data.install(pkg.region, { withMap });
+      else if (withMap && !mapPacks[pkg.region]) downloadMap(pkg.region, pkg.bbox).catch(() => {});
       setHomeRegion(pkg.region);
       setOnboarded();
     } catch {
@@ -114,6 +118,19 @@ export default function RegionStep() {
                   {t('timetableValid', { date: formatDate(Number(detected.valid_to)) })}
                 </Txt>
               </View>
+              {MAPS_SUPPORTED ? (
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: withMap }}
+                  onPress={() => setWithMap((x) => !x)}
+                  style={s.row}>
+                  <Icon name="map" size={20} color={C.blue} />
+                  <Txt w="bold" size={15} color={C.text2} style={{ flex: 1 }}>
+                    {t('mapOfflineGet', { size: fileSize(estimateMapBytes(detected.bbox)) })}
+                  </Txt>
+                  <View style={[s.check, withMap && s.checkOn]}>{withMap ? <Icon name="check" size={16} color="#FFFFFF" stroke={3} /> : null}</View>
+                </Pressable>
+              ) : null}
             </View>
           </View>
         </ScrollView>
@@ -185,6 +202,8 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 20, overflow: 'hidden', ...shadow },
   stats: { flexDirection: 'row', gap: 8 },
+  check: { width: 26, height: 26, borderRadius: 8, borderWidth: 2, borderColor: C.blue, alignItems: 'center', justifyContent: 'center' },
+  checkOn: { backgroundColor: C.blue },
   stat: { flex: 1, backgroundColor: C.bg, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12 },
   bottom: { paddingHorizontal: 24, paddingTop: 8, gap: 8 },
 });

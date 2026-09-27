@@ -72,6 +72,6 @@ server.listen(PORT, '0.0.0.0', () => {
     .filter((i) => i && i.family === 'IPv4' && !i.internal)
     .map((i) => i.address);
   console.log(`Dane OpaBus z: ${ROOT}`);
-  for (const ip of ips) console.log(`  EXPO_PUBLIC_DATA_URL=http://${ip}:${PORT}`);
-  console.log('Wpisz właściwy adres do pliku .env.local i uruchom aplikację: npm start');
+  for (const ip of ips) console.log(`  http://${ip}:${PORT}`);
+  console.log('Aplikacja w trybie testowym znajdzie ten serwer sama. Uruchom ją: npm start');
 });

@@ -11,7 +11,7 @@ import { Logo } from '@/components/Logo';
 import { Button, Pill, Txt } from '@/components/ui';
 import { C } from '@/constants/theme';
 import { t, useLang } from '@/i18n';
-import { POSITION_OPTIONS } from '@/lib/position';
+import { currentPosition } from '@/lib/position';
 
 // Ilustracja: fragment mapy, pinezka „tu jesteś” i przystanek autobusowy.
 const MAP = `<svg viewBox="0 0 390 360" xmlns="http://www.w3.org/2000/svg">
@@ -29,12 +29,9 @@ const MAP = `<svg viewBox="0 0 390 360" xmlns="http://www.w3.org/2000/svg">
 </svg>`;
 
 /** Pozycja z telefonu: najpierw ostatnia znana (szybko), potem bieżąca – maks. 10 s. */
-async function currentPosition(): Promise<{ lat: number; lon: number } | null> {
-  const last = await Location.getLastKnownPositionAsync({ maxAge: 10 * 60_000 }).catch(() => null);
-  if (last) return { lat: last.coords.latitude, lon: last.coords.longitude };
-  const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000));
-  const cur = await Promise.race([Location.getCurrentPositionAsync(POSITION_OPTIONS).catch(() => null), timeout]);
-  return cur ? { lat: cur.coords.latitude, lon: cur.coords.longitude } : null;
+async function readPosition(): Promise<{ lat: number; lon: number } | null> {
+  const pos = (await Location.getLastKnownPositionAsync({ maxAge: 10 * 60_000 }).catch(() => null)) ?? (await currentPosition(10_000));
+  return pos ? { lat: pos.coords.latitude, lon: pos.coords.longitude } : null;
 }
 
 export default function LocationStep() {
@@ -46,7 +43,7 @@ export default function LocationStep() {
     setBusy(true);
     try {
       const perm = await Location.requestForegroundPermissionsAsync();
-      const p = perm.granted ? await currentPosition() : null;
+      const p = perm.granted ? await readPosition() : null;
       router.push(p ? { pathname: '/witaj/region', params: { lat: String(p.lat), lon: String(p.lon) } } : '/witaj/region');
     } finally {
       setBusy(false);

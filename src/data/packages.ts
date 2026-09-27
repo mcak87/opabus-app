@@ -1,5 +1,6 @@
 // Paczki offline regionów: manifest → pobranie .sqlite.gz → kontrola sha256 → rozpakowanie → podmiana atomowa.
 // Format: OpaBus_paczki_offline_format.md (schemat 1).
+import Constants from 'expo-constants';
 import * as Crypto from 'expo-crypto';
 import { Directory, File, Paths } from 'expo-file-system';
 import * as SQLite from 'expo-sqlite';
@@ -8,8 +9,16 @@ import { gunzipSync } from 'fflate';
 
 import { loadCalendar, loadMeta, type Calendar, type Db, type RegionMeta } from './queries';
 
-/** Adres danych. W trakcie budowy aplikacji: EXPO_PUBLIC_DATA_URL=http://<IP komputera>:8787 (patrz README). */
-export const DATA_URL = (process.env.EXPO_PUBLIC_DATA_URL || 'https://opabus.com').replace(/\/$/, '');
+/**
+ * Adres danych: EXPO_PUBLIC_DATA_URL, jeśli ustawiony. W trakcie budowy aplikacji (serwer Expo) – ten sam komputer,
+ * port 8787 (`npm run dane`), więc zmiana adresu komputera w Wi-Fi niczego nie psuje. W wersji sklepowej – opabus.com.
+ */
+function dataUrl(): string {
+  if (process.env.EXPO_PUBLIC_DATA_URL) return process.env.EXPO_PUBLIC_DATA_URL;
+  const devHost = __DEV__ ? Constants.expoConfig?.hostUri?.split(':')[0] : undefined;
+  return devHost ? `http://${devHost}:8787` : 'https://opabus.com';
+}
+export const DATA_URL = dataUrl().replace(/\/$/, '');
 export const SUPPORTED_SCHEMA = 1;
 
 export type PackageInfo = {

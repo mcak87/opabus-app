@@ -17,13 +17,14 @@ import * as Location from 'expo-location';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View, type NativeSyntheticEvent } from 'react-native';
 
+import { MAP_STYLE } from '@/constants/map';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
 import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { stationDepartures, stationsInBox, type Departure, type Station } from '@/data/queries';
 import { t } from '@/i18n';
-import { POSITION_OPTIONS } from '@/lib/position';
+import { currentPosition } from '@/lib/position';
 import { getSettings } from '@/lib/settings';
 import { athensNow } from '@/lib/time';
 
@@ -31,8 +32,6 @@ import { Icon } from './Icon';
 import { StationCard } from './StationCard';
 import { Txt } from './ui';
 
-/** Jasny styl mapy – niebieskie przystanki OpaBus dobrze na nim widać. Atrybucja © OpenStreetMap jest w stylu. */
-export const MAP_STYLE = 'https://tiles.openfreemap.org/styles/positron';
 /** Poniżej tego przybliżenia nie rysujemy przystanków (za dużo punktów). */
 const MIN_ZOOM_STOPS = 12.5;
 const MIN_ZOOM = 5;
@@ -61,10 +60,8 @@ export default function StopsMap() {
     (async () => {
       const perm = await Location.getForegroundPermissionsAsync();
       // Ostatnia znana pozycja, a gdy jej brak – bieżąca (maks. 4 s, żeby mapa nie czekała długo).
-      const timeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000));
       const last = perm.granted
-        ? ((await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null)) ??
-          (await Promise.race([Location.getCurrentPositionAsync(POSITION_OPTIONS).catch(() => null), timeout])))
+        ? ((await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null)) ?? (await currentPosition(4000)))
         : null;
       const pkgs = (data.manifest?.packages ?? []).filter((p) => data.installed[p.region]);
       let view: InitialViewState = GREECE;
@@ -139,7 +136,7 @@ export default function StopsMap() {
     setHasLoc(true);
     const pos =
       (await Location.getLastKnownPositionAsync({ maxAge: 60_000 }).catch(() => null)) ??
-      (await Location.getCurrentPositionAsync(POSITION_OPTIONS).catch(() => null));
+      (await currentPosition());
     if (pos) camera.current?.easeTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 15, duration: 700 });
   };
 

@@ -5,10 +5,11 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
+import { MapOfflineRow } from '@/components/MapOfflineRow';
 import { RegionList } from '@/components/RegionList';
 import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
-import { useData } from '@/data/DataContext';
+import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { hasTranslation, LANGS, setLang, t, useLang } from '@/i18n';
 import { formatDate } from '@/lib/time';
 
@@ -83,25 +84,30 @@ export default function ProfileScreen() {
               {t('inPhone')}
             </Txt>
             {installed.map((i) => (
-              <View key={i.region} style={s.regionRow}>
-                <View style={{ flex: 1 }}>
-                  <Txt w="extrabold" size={16} color={C.ink}>
-                    {data.regionName(i.region)}
-                  </Txt>
-                  <Txt w="bold" size={13} color={C.muted}>
-                    {[t('validTo', { date: formatDate(i.validTo) }), data.hasUpdate(i.region) ? null : t('upToDate')].filter(Boolean).join(' · ')}
-                  </Txt>
-                </View>
-                {data.busy[i.region] ? (
-                  <ActivityIndicator color={C.blue} />
-                ) : data.hasUpdate(i.region) ? (
-                  <Pressable accessibilityRole="button" accessibilityLabel={`${t('update')} ${data.regionName(i.region)}`} onPress={() => data.install(i.region)} style={s.dl}>
-                    <Icon name="refresh" size={20} color={C.blue} stroke={2.4} />
+              <View key={i.region}>
+                <View style={s.regionRow}>
+                  <View style={{ flex: 1 }}>
+                    <Txt w="extrabold" size={16} color={C.ink}>
+                      {data.regionName(i.region)}
+                    </Txt>
+                    <Txt w="bold" size={13} color={C.muted}>
+                      {[t('validTo', { date: formatDate(i.validTo) }), data.hasUpdate(i.region) ? null : t('upToDate')].filter(Boolean).join(' · ')}
+                    </Txt>
+                  </View>
+                  {data.busy[i.region] ? (
+                    <ActivityIndicator color={C.blue} />
+                  ) : data.hasUpdate(i.region) ? (
+                    <Pressable accessibilityRole="button" accessibilityLabel={`${t('update')} ${data.regionName(i.region)}`} onPress={() => data.install(i.region)} style={s.dl}>
+                      <Icon name="refresh" size={20} color={C.blue} stroke={2.4} />
+                    </Pressable>
+                  ) : null}
+                  <Pressable accessibilityRole="button" accessibilityLabel={`${t('remove')} ${data.regionName(i.region)}`} onPress={() => data.remove(i.region)} style={s.del}>
+                    <Icon name="trash" size={20} color={C.muted} />
                   </Pressable>
-                ) : null}
-                <Pressable accessibilityRole="button" accessibilityLabel={`${t('remove')} ${data.regionName(i.region)}`} onPress={() => data.remove(i.region)} style={s.del}>
-                  <Icon name="trash" size={20} color={C.muted} />
-                </Pressable>
+                </View>
+                {OVERLAY_REGIONS.has(i.region) ? null : (
+                  <MapOfflineRow region={i.region} bbox={data.manifest?.packages.find((p) => p.region === i.region)?.bbox} />
+                )}
               </View>
             ))}
           </View>
@@ -119,7 +125,7 @@ export default function ProfileScreen() {
                 ) : data.installed[p.region] ? (
                   <Icon name="check" size={22} color={C.green} stroke={2.6} />
                 ) : (
-                  <Pressable accessibilityRole="button" accessibilityLabel={`${t('download')} ${data.regionName(p.region)}`} onPress={() => data.install(p.region)} style={s.dl}>
+                  <Pressable accessibilityRole="button" accessibilityLabel={`${t('download')} ${data.regionName(p.region)}`} onPress={() => data.install(p.region, { withMap: true })} style={s.dl}>
                     <Icon name="download" size={20} color={C.blue} stroke={2.4} />
                   </Pressable>
                 )

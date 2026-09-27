@@ -15,7 +15,7 @@ import { C, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { loadNearby, stationNames, type StationWithDeps } from '@/data/nearby';
 import { t, useLang } from '@/i18n';
-import { POSITION_OPTIONS } from '@/lib/position';
+import { currentPosition } from '@/lib/position';
 import { walkMinutes, type LatLon } from '@/lib/geo';
 import { setHomeRegion, useSettings } from '@/lib/settings';
 import { athensNow, hhmm } from '@/lib/time';
@@ -44,12 +44,9 @@ export default function StartScreen() {
     setLoc({ state: 'locating' });
     const last = await Location.getLastKnownPositionAsync({ maxAge: 5 * 60_000 }).catch(() => null);
     if (last) setLoc({ state: 'ok', p: { lat: last.coords.latitude, lon: last.coords.longitude } });
-    try {
-      const cur = await Location.getCurrentPositionAsync(POSITION_OPTIONS);
-      setLoc({ state: 'ok', p: { lat: cur.coords.latitude, lon: cur.coords.longitude } });
-    } catch {
-      if (!last) setLoc({ state: 'off', canAsk: true, gps: true });
-    }
+    const cur = await currentPosition();
+    if (cur) setLoc({ state: 'ok', p: { lat: cur.coords.latitude, lon: cur.coords.longitude } });
+    else if (!last) setLoc({ state: 'off', canAsk: true, gps: true });
   }, []);
 
   useEffect(() => {
@@ -202,7 +199,7 @@ export default function StartScreen() {
               title={data.busy[primary.region] ? t('downloading') : t('regionDownload', { name: data.regionName(primary.region) })}
               icon="download"
               loading={data.busy[primary.region]}
-              onPress={() => data.install(primary.region).catch(() => setError(true))}
+              onPress={() => data.install(primary.region, { withMap: true }).catch(() => setError(true))}
             />
           </Card>
         ) : null}

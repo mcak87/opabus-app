@@ -5,6 +5,7 @@ import { getLang } from '@/i18n';
 import { bboxArea, inBbox, type LatLon } from '@/lib/geo';
 import { getSettings, setHomeRegion } from '@/lib/settings';
 
+import { deleteMap, downloadMap, loadMapPacks } from './offlineMaps';
 import {
   cachedManifest,
   cachedRegionGroups,
@@ -29,7 +30,8 @@ type DataState = {
   manifestError: boolean;
   busy: Record<string, boolean>;
   refresh: () => Promise<void>;
-  install: (region: string) => Promise<void>;
+  /** Pobiera rozkłady regionu; withMap – od razu także mapę offline (w tle). */
+  install: (region: string, opts?: { withMap?: boolean }) => Promise<void>;
   remove: (region: string) => Promise<void>;
   regionName: (region: string) => string;
   /** Regiony (bez paczek ogólnokrajowych), których obszar obejmuje punkt – od najmniejszego. */
@@ -65,7 +67,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   }, [refreshTick]);
 
   const install = useCallback(
-    async (region: string) => {
+    async (region: string, opts?: { withMap?: boolean }) => {
       const pkg = manifest?.packages.find((p) => p.region === region);
       if (!pkg || !manifest) return;
       setBusy((b) => ({ ...b, [region]: true }));
@@ -76,6 +78,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         // Pierwszy pobrany region staje się „domowym” dla ekranu Start bez lokalizacji.
         const home = getSettings().homeRegion;
         if (!OVERLAY_REGIONS.has(region) && (!home || !all[home])) setHomeRegion(region);
+        if (opts?.withMap && !OVERLAY_REGIONS.has(region)) downloadMap(region, pkg.bbox).catch(() => {});
       } finally {
         setBusy((b) => ({ ...b, [region]: false }));
       }
@@ -83,8 +86,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [manifest],
   );
 
+  // Mapy offline zapisane w telefonie (i wznowienie przerwanego pobierania).
+  useEffect(() => {
+    loadMapPacks().catch(() => {});
+  }, []);
+
   const remove = useCallback(async (region: string) => {
     await removePackage(region);
+    await deleteMap(region).catch(() => {});
     const all = listInstalled();
     setInstalled(all);
     if (getSettings().homeRegion === region) {
