@@ -11,13 +11,15 @@ import { stopName, TripOption } from '@/components/TripOption';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
+import { cachedFares, fetchFares } from '@/data/fares';
 import { openRegion } from '@/data/packages';
 import { modeOf } from '@/data/queries';
-import { t, useLang, type Key } from '@/i18n';
+import { getLang, t, useLang, type Key } from '@/i18n';
 import type { LatLon } from '@/lib/geo';
 import { currentPosition } from '@/lib/position';
 import { athensNow, formatDate, hhmm } from '@/lib/time';
-import { placeName } from '@/planner/format';
+import { tripPrices } from '@/planner/fares';
+import { placeName, priceText } from '@/planner/format';
 import type { RideLeg } from '@/planner/raptor';
 import { planTrip, regionFor } from '@/planner/service';
 import { setTrip, usePlanner, type Place } from '@/planner/store';
@@ -48,9 +50,11 @@ export default function ResultsScreen() {
       const region = regionFor(data.manifest?.packages ?? [], a, b);
       if (!region) throw new Error('noRegionRoute');
       const [{ net, at, result }, { meta }] = await Promise.all([planTrip(region, a, b, when, time), openRegion(region)]);
+      // Cennik: z telefonu, a gdy go jeszcze nie ma – próbujemy pobrać (bez internetu po prostu bez cen).
+      const fares = cachedFares(region) ?? (await fetchFares(region).catch(() => null));
       if (!alive) return;
       setValidTo(meta.validTo);
-      setTrip({ region, net, from, to, fromPoint: a, toPoint: b, result, at });
+      setTrip({ region, net, from, to, fromPoint: a, toPoint: b, result, at, fares });
     })().catch((e: Error) => {
       if (alive) setError(e.message === 'needLocation' || e.message === 'noRegionRoute' ? (e.message as Key) : 'errorGeneric');
     });
@@ -66,6 +70,13 @@ export default function ResultsScreen() {
   const startAt = trip ? (res?.tomorrow ? 0 : trip.at) : null;
   const back = res?.lastBack;
   const backRide = back?.legs.find((l): l is RideLeg => l.kind === 'ride');
+
+  // Ceny opcji i „Najtaniej”: wyraźnie tańsza (o ≥ 0,50 €) od kolejnej opcji ze znaną ceną.
+  const prices =
+    trip?.fares && res && net ? res.options.map((o) => tripPrices(trip.fares!, net, o.legs.filter((l): l is RideLeg => l.kind === 'ride')).total) : null;
+  const known = (prices ?? []).map((p, i) => ({ p, i })).filter((x) => x.p.kind !== 'unknown').sort((x, y) => x.p.max - y.p.max);
+  const cheapest = known.length >= 2 && known[0].p.max + 0.5 <= known[1].p.max ? known[0].i : -1;
+  const fareLabel = trip?.fares?.operators.KTEL?.label?.[getLang()] ?? trip?.fares?.operators.KTEL?.label?.en;
 
   return (
     <View style={s.screen}>
@@ -142,7 +153,7 @@ export default function ResultsScreen() {
                 </Txt>
               </View>
             ) : null}
-            {res.options.length === 0 ? (
+            {res.options.length === 0 && !res.walkOnlyMin ? (
               <View style={s.info}>
                 <Icon name="route" size={22} color={C.orange} />
                 <Txt w="bold" size={15} color={C.text2} style={{ flex: 1 }}>
@@ -152,7 +163,14 @@ export default function ResultsScreen() {
             ) : null}
 
             {res.options.map((o, i) => (
-              <TripOption key={i} net={net} o={o} nowSec={nowSec} onPress={() => router.push({ pathname: '/planer/szczegoly', params: { i: String(i) } })} />
+              <TripOption
+                key={i}
+                net={net}
+                o={o}
+                nowSec={nowSec}
+                price={prices ? priceText(prices[i]) : undefined}
+                extraLabels={i === cheapest ? ['cheapest'] : []}
+                onPress={() => router.push({ pathname: '/planer/szczegoly', params: { i: String(i) } })} />
             ))}
 
             {back && backRide && !res.tomorrow ? (
@@ -180,6 +198,11 @@ export default function ResultsScreen() {
               </View>
             ) : null}
 
+            {prices && fareLabel ? (
+              <Txt w="bold" size={12} color={C.muted} style={{ marginHorizontal: 8 }}>
+                {[t('fareSource', { label: fareLabel }), prices.some((p) => p.kind === 'upTo') ? t('fareUpToNote') : null].filter(Boolean).join(' ')}
+              </Txt>
+            ) : null}
             {validTo ? (
               <Txt w="bold" size={12} color={C.muted} style={{ marginHorizontal: 8 }}>
                 {t('timetableValid', { date: formatDate(validTo) })}

@@ -1,14 +1,15 @@
 // Test planera na prawdziwej paczce (bez telefonu):
 //   node scripts/test-planner.ts <region.sqlite.gz> <latA> <lonA> <latB> <lonB> [RRRR-MM-DDTHH:MM]
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { gunzipSync } from 'node:zlib';
 
 import { loadCalendar, type Db, type SqlParam } from '../src/data/queries.ts';
+import { tripPrices, type FareFile, type Price } from '../src/planner/fares.ts';
 import { plan } from '../src/planner/plan.ts';
-import { loadNet, type Journey, type Net } from '../src/planner/raptor.ts';
+import { loadNet, type Journey, type Net, type RideLeg } from '../src/planner/raptor.ts';
 import { athensNow, hhmm } from '../src/lib/time.ts';
 
 const [file, la, loa, lb, lob, when] = process.argv.slice(2);
@@ -39,6 +40,24 @@ const fmt = (n: Net, j: Journey) => `${hhmm(j.leave)}–${hhmm(j.arrive)} (${Mat
 
 console.log(`sieć: ${net.stops.length} przyst., ${net.patterns.length} wzorców – ${(t1 - t0).toFixed(0)} ms; planowanie ${(t2 - t1).toFixed(0)} ms`);
 console.log(`dzień ${res.day.date}${res.tomorrow ? ' (JUTRO)' : ''}, zasięg ${res.radius} m, pieszo całość: ${res.walkOnlyMin ?? '-'} min`);
-for (const o of res.options) console.log(`\n${fmt(net, o)} ${o.labels.join(',')}\n   ${show(o)}`);
+// Cennik obok paczki: …/offline/<region>.sqlite.gz → …/ceny/<region>.json
+const faresPath = join(dirname(dirname(file)), 'ceny', basename(file).replace('.sqlite.gz', '.json'));
+const fares: FareFile | null = existsSync(faresPath) ? JSON.parse(readFileSync(faresPath, 'utf8')) : null;
+const eur = (p: Price) =>
+  p.kind === 'unknown'
+    ? 'u kierowcy'
+    : p.kind === 'exact'
+      ? `${p.min.toFixed(2)} €`
+      : p.kind === 'upTo'
+        ? `do ${p.max.toFixed(2)} €`
+        : p.min === p.max
+          ? `ok. ${p.min.toFixed(2)} €`
+          : `ok. ${p.min.toFixed(2)}–${p.max.toFixed(2)} €`;
+const priceText = (j: Journey) => {
+  if (!fares) return '';
+  const { rides, total } = tripPrices(fares, net, j.legs.filter((l): l is RideLeg => l.kind === 'ride'));
+  return ` | cena: ${eur(total)} [${rides.map(eur).join(' + ')}]`;
+};
+for (const o of res.options) console.log(`\n${fmt(net, o)} ${o.labels.join(',')}${priceText(o)}\n   ${show(o)}`);
 if (res.comparison) console.log('\nporównanie:', { ...res.comparison, station: net.stops[net.stationStops.get(res.comparison.station)![0]].nameEn });
 if (res.lastBack) console.log(`\nostatni powrót: ${fmt(net, res.lastBack)}\n   ${show(res.lastBack)}`);

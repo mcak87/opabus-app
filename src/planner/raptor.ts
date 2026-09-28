@@ -16,9 +16,11 @@ const DAY = 86400;
 
 // ---------- Sieć (raz na paczkę regionu) ----------
 
-export type NetStop = { id: number; station: number; lat: number; lon: number; name: string; nameEn: string };
+export type NetStop = { id: number; code: string; station: number; lat: number; lon: number; name: string; nameEn: string };
 export type NetRoute = {
   id: number;
+  /** route_id z GTFS (np. KTEL_LIN) – klucz cennika. */
+  code: string;
   shortName: string;
   longName: string;
   type: number;
@@ -53,21 +55,22 @@ export type Net = {
 
 export async function loadNet(db: Db): Promise<Net> {
   const [stopRows, stationRows, patRows, psRows, tripRows, routeRows] = await Promise.all([
-    db.all<{ id: number; station_id: number; lat: number; lon: number }>('SELECT id, station_id, lat, lon FROM stops ORDER BY id'),
+    db.all<{ id: number; code: string; station_id: number; lat: number; lon: number }>('SELECT id, code, station_id, lat, lon FROM stops ORDER BY id'),
     db.all<{ id: number; name: string; name_en: string }>('SELECT id, name, name_en FROM stations'),
     db.all<{ id: number; route_id: number; headsign: string }>('SELECT id, route_id, headsign FROM patterns ORDER BY id'),
     db.all<{ pattern_id: number; seq: number; stop_id: number; arr_offset: number; dep_offset: number; pickup: number; drop_off: number; est: number }>(
       'SELECT pattern_id, seq, stop_id, arr_offset, dep_offset, pickup, drop_off, est FROM pattern_stops ORDER BY pattern_id, seq',
     ),
     db.all<{ id: number; pattern_id: number; service_id: number; start: number }>('SELECT id, pattern_id, service_id, start FROM trips ORDER BY pattern_id, start'),
-    db.all<{ id: number; short_name: string; long_name: string; type: number; color: string | null; text_color: string | null; code: string | null; name: string | null }>(
-      'SELECT r.id, r.short_name, r.long_name, r.type, r.color, r.text_color, a.code, a.name FROM routes r LEFT JOIN agencies a ON a.id = r.agency_id',
+    db.all<{ id: number; route_code: string | null; short_name: string; long_name: string; type: number; color: string | null; text_color: string | null; code: string | null; name: string | null }>(
+      'SELECT r.id, r.code AS route_code, r.short_name, r.long_name, r.type, r.color, r.text_color, a.code, a.name FROM routes r LEFT JOIN agencies a ON a.id = r.agency_id',
     ),
   ]);
 
   const stationName = new Map(stationRows.map((s) => [s.id, s]));
   const stops: NetStop[] = stopRows.map((s) => ({
     id: s.id,
+    code: s.code ?? '',
     station: s.station_id,
     lat: s.lat,
     lon: s.lon,
@@ -125,6 +128,7 @@ export async function loadNet(db: Db): Promise<Net> {
       r.id,
       {
         id: r.id,
+        code: r.route_code ?? '',
         shortName: r.short_name ?? '',
         longName: r.long_name ?? '',
         type: r.type,

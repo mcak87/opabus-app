@@ -5,6 +5,7 @@ import { getLang } from '@/i18n';
 import { bboxArea, inBbox, type LatLon } from '@/lib/geo';
 import { getSettings, setHomeRegion } from '@/lib/settings';
 
+import { fetchFares, removeFares } from './fares';
 import { deleteMap, downloadMap, loadMapPacks } from './offlineMaps';
 import {
   cachedManifest,
@@ -59,6 +60,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setManifest(m);
         if (g) setGroups(g);
         setManifestError(false);
+        // Cenniki pobranych regionów – małe pliki, odświeżane przy każdym połączeniu.
+        Object.keys(listInstalled()).forEach((r) => fetchFares(r).catch(() => {}));
       })
       .catch(() => alive && setManifestError(true));
     return () => {
@@ -73,6 +76,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setBusy((b) => ({ ...b, [region]: true }));
       try {
         await installPackage(pkg, manifest.schema);
+        fetchFares(region).catch(() => {});
         const all = listInstalled();
         setInstalled(all);
         // Pierwszy pobrany region staje się „domowym” dla ekranu Start bez lokalizacji.
@@ -94,6 +98,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const remove = useCallback(async (region: string) => {
     await removePackage(region);
     await deleteMap(region).catch(() => {});
+    removeFares(region);
     const all = listInstalled();
     setInstalled(all);
     if (getSettings().homeRegion === region) {

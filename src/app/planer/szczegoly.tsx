@@ -9,9 +9,10 @@ import { stopName } from '@/components/TripOption';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, lineColor, shadow } from '@/constants/theme';
 import { modeOf } from '@/data/queries';
-import { t, useLang } from '@/i18n';
+import { getLang, t, useLang } from '@/i18n';
 import { hhmm } from '@/lib/time';
-import { duration, placeName } from '@/planner/format';
+import { tripPrices, type Price } from '@/planner/fares';
+import { duration, placeName, priceText } from '@/planner/format';
 import type { Net, RideLeg, WalkLeg } from '@/planner/raptor';
 import { usePlanner } from '@/planner/store';
 
@@ -35,6 +36,10 @@ export default function TripDetails() {
   const net = trip.net;
   const firstRideIdx = o.legs.findIndex((l) => l.kind === 'ride');
   const lastRideIdx = o.legs.map((l) => l.kind).lastIndexOf('ride');
+  const rideLegs = o.legs.filter((l): l is RideLeg => l.kind === 'ride');
+  const prices = trip.fares ? tripPrices(trip.fares, net, rideLegs) : null;
+  const ops = new Set((prices?.rides ?? []).map((p) => p.op).filter(Boolean));
+  const fareLabel = trip.fares?.operators.KTEL?.label?.[getLang()] ?? trip.fares?.operators.KTEL?.label?.en;
 
   return (
     <View style={s.screen}>
@@ -53,11 +58,42 @@ export default function TripDetails() {
                 <WalkRow key={k} text={k < firstRideIdx ? t('walkToStop', { min: mins(l) }) : k > lastRideIdx ? t('walkToDest', { min: mins(l) }) : t('walkTransfer', { min: mins(l) })} />
               ) : null
             ) : (
-              <RideRows key={k} net={net} leg={l} />
+              <RideRows key={k} net={net} leg={l} price={prices?.rides[rideLegs.indexOf(l)]} />
             ),
           )}
           <Point time={hhmm(o.arrive)} title={placeName(trip.to)} kicker={t('destination')} color={C.orange} last />
         </View>
+
+        {prices ? (
+          <View style={[s.card, s.fareCard]}>
+            <View style={s.fareTop}>
+              <Txt w="black" size={15} color={C.ink} style={{ flex: 1 }}>
+                {t('fareTotal')}
+              </Txt>
+              <Txt w="black" size={18} color={C.ink}>
+                {priceText(prices.total)}
+              </Txt>
+            </View>
+            {ops.has('KTEL') ? (
+              <Txt w="semibold" size={13} color={C.text2} style={s.fareLine}>
+                {`KTEL: ${t('fareKtelBuy')}`}
+              </Txt>
+            ) : null}
+            {ops.has('RODA') ? (
+              <Txt w="semibold" size={13} color={C.text2} style={s.fareLine}>
+                {`RODA: ${t('fareRodaBuy')}`}
+              </Txt>
+            ) : null}
+            {ops.has('KTEL') && ops.has('RODA') ? (
+              <Txt w="semibold" size={13} color={C.text2} style={s.fareLine}>
+                {t('fareSeparate')}
+              </Txt>
+            ) : null}
+            <Txt w="bold" size={12} color={C.muted} style={s.fareLine}>
+              {[fareLabel ? t('fareSource', { label: fareLabel }) : null, prices.rides.some((p) => p.kind === 'upTo') ? t('fareUpToNote') : null].filter(Boolean).join(' ')}
+            </Txt>
+          </View>
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -104,7 +140,7 @@ function WalkRow({ text }: { text: string }) {
   );
 }
 
-function RideRows({ net, leg }: { net: Net; leg: RideLeg }) {
+function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }) {
   const [open, setOpen] = useState(false);
   const pat = net.patterns[leg.pattern];
   const r = net.routes.get(pat.route);
@@ -137,6 +173,11 @@ function RideRows({ net, leg }: { net: Net; leg: RideLeg }) {
               {[t('towards', { headsign: pat.headsign }), r?.agencyName || r?.agencyCode].filter(Boolean).join(' · ')}
             </Txt>
           </View>
+          {price ? (
+            <Txt w="extrabold" size={13} color={C.text2}>
+              {`${t('fareTicket', { op: price.op || r?.agencyCode || '' })} · ${priceText(price)}`}
+            </Txt>
+          ) : null}
           <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((x) => !x)} hitSlop={6} style={s.stopsBtn}>
             <Txt w="bold" size={13} color={C.muted}>
               {t('stopsRide', { n: stops, min: Math.max(1, Math.round((leg.arr - leg.dep) / 60)) })}
@@ -194,5 +235,8 @@ const s = StyleSheet.create({
   walkContent: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 6 },
   lineRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   stopsBtn: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  fareCard: { marginTop: 12, paddingHorizontal: 16, gap: 6 },
+  fareTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fareLine: { lineHeight: 18 },
   midRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 2 },
 });

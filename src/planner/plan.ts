@@ -7,7 +7,7 @@ import { addDays, type ServiceDay } from '../lib/time.ts';
 
 import { dayTrips, departureTimes, raptor, stopsNear, walkSec, type DayTrips, type Journey, type Net, type RideLeg } from './raptor.ts';
 
-export type Label = 'earliest' | 'fastest' | 'direct' | 'lessWalk';
+export type Label = 'earliest' | 'fastest' | 'direct' | 'lessWalk' | 'cheapest';
 export type Option = Journey & { labels: Label[] };
 export type Comparison = {
   /** Przystanek najlepszej opcji (stacja) i ile dalej od najbliższego [m]. */
@@ -32,6 +32,7 @@ const WINDOWS = [90 * 60, 4 * 3600, 20 * 3600];
 const RADII = [800, 1500];
 const MAX_RUNS = 80;
 const MAX_OPTIONS = 5;
+const WALK_ONLY_SEC = 8 * 60;
 
 const signature = (j: Journey) =>
   j.legs
@@ -139,8 +140,13 @@ export function lastBack(net: Net, trips: DayTrips, b: LatLon, a: LatLon, from: 
 
 export function plan(net: Net, cal: Calendar, req: { from: LatLon; to: LatLon; day: ServiceDay; prev: ServiceDay; at: number; radius?: number }): PlanResult {
   const direct = distanceM(req.from.lat, req.from.lon, req.to.lat, req.to.lon);
-  const walkOnlyMin = direct <= 2000 ? Math.max(1, Math.round(walkSec(direct) / 60)) : null;
+  const walkDirect = walkSec(direct);
+  const walkOnlyMin = direct <= 2000 ? Math.max(1, Math.round(walkDirect / 60)) : null;
   const radii = req.radius ? [req.radius, Math.max(req.radius, 1500)] : RADII;
+  // Cel tuż obok (do 8 min pieszo) – tylko spacer, bez autobusów.
+  if (walkOnlyMin !== null && walkDirect <= WALK_ONLY_SEC) {
+    return { options: [], day: req.day, tomorrow: false, radius: radii[0], comparison: null, lastBack: null, walkOnlyMin };
+  }
 
   const attempt = (day: ServiceDay, prev: ServiceDay, at: number) => {
     const trips = dayTrips(net, cal, day, prev);
@@ -149,7 +155,8 @@ export function plan(net: Net, cal: Calendar, req: { from: LatLon; to: LatLon; d
       const egress = stopsNear(net, req.to, radius);
       if (!access.size || !egress.size) continue;
       for (const w of WINDOWS) {
-        const all = dedupe(collect(net, trips, access, egress, at, at + w));
+        // Autobus ma sens tylko, gdy jest szybszy niż dojście pieszo do celu.
+        const all = dedupe(collect(net, trips, access, egress, at, at + w)).filter((j) => walkOnlyMin === null || j.arrive - j.leave < walkDirect);
         if (all.length >= 2 || (all.length && w === WINDOWS[WINDOWS.length - 1])) {
           const options = choose(pareto(all));
           return { trips, radius, access, all, options };
