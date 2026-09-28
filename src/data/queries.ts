@@ -125,6 +125,31 @@ export async function stationById(db: Db, id: number): Promise<Station | null> {
   return rows[0] ?? null;
 }
 
+/** Słupki stacji: kod GTFS, położenie, czy położenie jest przybliżone, kierunki odjazdów (do zgłoszeń poprawek). */
+export type StationStop = { id: number; code: string; lat: number; lon: number; verify: boolean; headsigns: string[] };
+
+export async function stationStops(db: Db, station: number): Promise<StationStop[]> {
+  const [stops, hs] = await Promise.all([
+    db.all<{ id: number; code: string; lat: number; lon: number; verify: number }>('SELECT id, code, lat, lon, verify FROM stops WHERE station_id = ? ORDER BY id', [station]),
+    db.all<{ stop_id: number; headsign: string }>(
+      `SELECT DISTINCT ps.stop_id, p.headsign
+         FROM stops s
+         JOIN pattern_stops ps ON ps.stop_id = s.id
+         JOIN patterns p ON p.id = ps.pattern_id
+        WHERE s.station_id = ? AND ps.pickup <> 1 AND ps.seq < p.stop_count - 1`,
+      [station],
+    ),
+  ]);
+  return stops.map((s) => ({
+    id: s.id,
+    code: s.code,
+    lat: s.lat,
+    lon: s.lon,
+    verify: s.verify === 1,
+    headsigns: [...new Set(hs.filter((h) => h.stop_id === s.id).map((h) => h.headsign).filter(Boolean))],
+  }));
+}
+
 /** Kod przystanku z GTFS (ten sam co w linkach /s/<region>/<kod>) → stacja. */
 export async function stationIdForStopCode(db: Db, code: string): Promise<number | null> {
   const rows = await db.all<{ station_id: number }>('SELECT station_id FROM stops WHERE code = ?', [code]);

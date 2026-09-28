@@ -9,7 +9,7 @@ import { LineBadge, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { minutesTo, stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
-import { lastDeparturesToday, stationById, stationDepartures, type Departure, type RegionMeta, type Station } from '@/data/queries';
+import { lastDeparturesToday, stationById, stationDepartures, stationStops, type Departure, type RegionMeta, type Station } from '@/data/queries';
 import { t, useLang } from '@/i18n';
 import { isFavorite, toggleFavorite, useSettings } from '@/lib/settings';
 import { athensNow, formatDate, type Now } from '@/lib/time';
@@ -26,6 +26,7 @@ export default function StopScreen() {
   const [now, setNow] = useState<Now>(() => athensNow());
   const [span, setSpan] = useState(STEP);
   const [error, setError] = useState(false);
+  const [approx, setApprox] = useState(false);
   const { favorites } = useSettings();
 
   const load = useCallback(async () => {
@@ -36,6 +37,7 @@ export default function StopScreen() {
       setNow(n);
       setMeta(m);
       setSt(await stationById(db, id));
+      setApprox((await stationStops(db, id)).some((x) => x.verify));
       const list = await stationDepartures(db, cal, id, n, n.sec - 60, n.sec + span);
       setDeps(list.filter((d) => d.dep >= n.sec - 30));
       setLast((await lastDeparturesToday(db, cal, id, n)).filter((d) => d.dep >= n.sec - 30));
@@ -55,6 +57,7 @@ export default function StopScreen() {
   const names = st ? stationNames(st) : null;
   const expired = meta && meta.validTo > 0 && meta.validTo < now.date;
   const fav = isFavorite(favorites, region, Number(station));
+  const openFix = () => router.push({ pathname: '/popraw/[region]/[station]', params: { region, station: String(station) } });
 
   const star = st ? (
     <Pressable
@@ -145,6 +148,29 @@ export default function StopScreen() {
             </View>
           </View>
         ) : null}
+        {st ? (
+          approx ? (
+            <Pressable accessibilityRole="button" onPress={openFix} style={s.fixCard}>
+              <Icon name="pin" size={24} color={C.orange} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Txt w="extrabold" size={15} color={C.orangeText}>
+                  {t('fixApproxTitle')}
+                </Txt>
+                <Txt w="semibold" size={13} color={C.orangeDeep} style={{ lineHeight: 18 }}>
+                  {t('fixApproxBody')}
+                </Txt>
+              </View>
+              <Icon name="chevronR" size={18} color={C.orangeText} stroke={2.4} />
+            </Pressable>
+          ) : (
+            <Pressable accessibilityRole="button" onPress={openFix} style={s.fixLink} hitSlop={6}>
+              <Icon name="pin" size={16} color={C.muted} />
+              <Txt w="bold" size={13} color={C.muted}>
+                {t('fixButton')}
+              </Txt>
+            </Pressable>
+          )
+        ) : null}
       </ScrollView>
     </View>
   );
@@ -159,5 +185,7 @@ const s = StyleSheet.create({
   more: { alignItems: 'center', paddingVertical: 12 },
   lastCard: { flexDirection: 'row', gap: 14, backgroundColor: C.orangeBg, borderColor: C.orangeLine, borderWidth: 1.5, borderRadius: 18, padding: 14, marginTop: 4 },
   lastIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.orange, alignItems: 'center', justifyContent: 'center' },
+  fixCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.orangeBg, borderColor: C.orangeLine, borderWidth: 1.5, borderRadius: 18, padding: 14, marginTop: 4 },
+  fixLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
   star: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...shadow },
 });

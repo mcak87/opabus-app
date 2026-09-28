@@ -20,7 +20,19 @@ import type { Place } from '@/planner/store';
 import { Icon } from './Icon';
 import { Button, Txt } from './ui';
 
-export default function PickMap({ field, onPick }: { field: 'from' | 'to'; onPick: (p: Place) => void }) {
+export default function PickMap({
+  field,
+  onPick,
+  label,
+  center: startAt,
+}: {
+  field?: 'from' | 'to';
+  onPick: (p: Place) => void;
+  /** Napis na przycisku (domyślnie „Ustaw jako cel/start”). */
+  label?: string;
+  /** Punkt startowy mapy (np. obecne położenie przystanku) – przybliżenie jak do ulicy. */
+  center?: LatLon;
+}) {
   const insets = useSafeAreaInsets();
   const data = useData();
   const [initial, setInitial] = useState<InitialViewState | null>(null);
@@ -36,7 +48,8 @@ export default function PickMap({ field, onPick }: { field: 'from' | 'to'; onPic
       const last = perm.granted ? await Location.getLastKnownPositionAsync({ maxAge: 30 * 60_000 }).catch(() => null) : null;
       const pkgs = (data.manifest?.packages ?? []).filter((p) => data.installed[p.region] && !OVERLAY_REGIONS.has(p.region));
       let view: InitialViewState = { center: [23.7, 38.4], zoom: 5.6 };
-      if (last && pkgs.some((p) => inBbox({ lat: last.coords.latitude, lon: last.coords.longitude }, p.bbox, 0))) {
+      if (startAt) view = { center: [startAt.lon, startAt.lat], zoom: 18 };
+      else if (last && pkgs.some((p) => inBbox({ lat: last.coords.latitude, lon: last.coords.longitude }, p.bbox, 0))) {
         view = { center: [last.coords.longitude, last.coords.latitude], zoom: 15 };
       } else {
         const home = pkgs.find((p) => p.region === getSettings().homeRegion) ?? pkgs[0];
@@ -113,7 +126,7 @@ export default function PickMap({ field, onPick }: { field: 'from' | 'to'; onPic
             </View>
           </View>
         ) : null}
-        <Button title={field === 'from' ? t('setAsFrom') : t('setAsTo')} icon="pin" disabled={!center} onPress={pick} />
+        <Button title={label ?? (field === 'from' ? t('setAsFrom') : t('setAsTo'))} icon="pin" disabled={!center} onPress={pick} />
       </View>
     </View>
   );

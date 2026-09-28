@@ -34,7 +34,7 @@ const server = createServer(async (req, res) => {
   if (req.method === 'POST' && url.pathname.startsWith('/api/')) {
     let body = '';
     for await (const chunk of req) body += chunk;
-    log('POST', url.pathname, body.slice(0, 200));
+    log('POST', url.pathname, body.slice(0, 4000));
     res.writeHead(204).end();
     return;
   }
