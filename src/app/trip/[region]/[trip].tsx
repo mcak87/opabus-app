@@ -3,6 +3,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
+import { ReminderButton } from '@/components/ReminderButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Txt } from '@/components/ui';
 import { C } from '@/constants/theme';
@@ -11,12 +12,18 @@ import { openRegion } from '@/data/packages';
 import { tripTimeline, type TripStop } from '@/data/queries';
 import { t, useLang } from '@/i18n';
 
+const REMIND_BEFORE_MS = 5 * 60_000;
+
 export default function TripScreen() {
   useLang();
-  const { region, trip, from } = useLocalSearchParams<{ region: string; trip: string; from?: string }>();
+  /** dep – chwila odjazdu z przystanku `from` (ms), przekazana z listy odjazdów. */
+  const { region, trip, from, dep } = useLocalSearchParams<{ region: string; trip: string; from?: string; dep?: string }>();
   const [stops, setStops] = useState<TripStop[] | null>(null);
   const [title, setTitle] = useState('');
+  const [lineLabel, setLineLabel] = useState('');
+  const [headsign, setHeadsign] = useState('');
   const scroll = useRef<ScrollView>(null);
+  const depAt = dep && Number.isFinite(Number(dep)) ? Number(dep) : null;
 
   useEffect(() => {
     (async () => {
@@ -27,6 +34,8 @@ export default function TripScreen() {
         [Number(trip)],
       );
       setTitle(route[0] ? `${route[0].short_name || route[0].long_name} → ${route[0].headsign}` : '');
+      setLineLabel(route[0] ? route[0].short_name || route[0].long_name : '');
+      setHeadsign(route[0]?.headsign ?? '');
       setStops(tl);
     })();
   }, [region, trip]);
@@ -75,6 +84,18 @@ export default function TripScreen() {
             );
           })}
         </View>
+
+        {/* Przypomnienie 5 min przed odjazdem z przystanku, na którym wsiadasz (projekt: canvas „Przebieg kursu”). */}
+        {stops && boardIdx >= 0 && depAt ? (
+          <ReminderButton
+            rkey={`trip:${region}:${trip}:${depAt}`}
+            at={depAt - REMIND_BEFORE_MS}
+            label={t('remindBeforeDep', { min: REMIND_BEFORE_MS / 60_000 })}
+            title={t('remindDepTitle', { line: lineLabel, time: stops[boardIdx].est ? t('approx', { time: stops[boardIdx].time }) : stops[boardIdx].time })}
+            body={t('remindDepBody', { stop: stationNames(stops[boardIdx]).main, headsign })}
+            url={`/stop/${region}/${stops[boardIdx].stationId}`}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );

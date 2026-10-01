@@ -14,7 +14,7 @@ import { lastDeparturesToday, stationById, stationDepartures, stationStops, type
 import { t, useLang } from '@/i18n';
 import { distanceM } from '@/lib/geo';
 import { isFavorite, setLodging, toggleFavorite, useSettings } from '@/lib/settings';
-import { athensNow, formatDate, type Now } from '@/lib/time';
+import { athensEpoch, athensNow, formatDate, type Now } from '@/lib/time';
 
 const STEP = 3 * 3600;
 
@@ -103,7 +103,10 @@ export default function StopScreen() {
               key={`${d.dayOffset}:${d.tripId}`}
               accessibilityRole="button"
               onPress={() =>
-                router.push({ pathname: '/trip/[region]/[trip]', params: { region, trip: String(d.tripId), from: String(station) } })
+                router.push({
+                  pathname: '/trip/[region]/[trip]',
+                  params: { region, trip: String(d.tripId), from: String(station), dep: String(athensEpoch(now, d.dep)) },
+                })
               }
               style={({ pressed }) => [s.row, pressed && { opacity: 0.8 }]}>
               <View style={s.timeCol}>

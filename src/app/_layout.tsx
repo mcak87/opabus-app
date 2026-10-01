@@ -1,5 +1,6 @@
 import { Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black, useFonts } from '@expo-google-fonts/nunito';
 import { DefaultTheme, router, Stack, ThemeProvider, useRootNavigationState, type Href } from 'expo-router';
+import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -9,9 +10,11 @@ import { C } from '@/constants/theme';
 import { DataProvider } from '@/data/DataContext';
 import { useLang } from '@/i18n';
 import { checkInstallReferrer } from '@/lib/installReferrer';
+import { initReminders, reminderUrl } from '@/lib/reminders';
 import { useSettings } from '@/lib/settings';
 
 SplashScreen.preventAutoHideAsync();
+initReminders();
 
 const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: C.bg, primary: C.blue, text: C.text } };
 
@@ -31,6 +34,20 @@ export default function RootLayout() {
     checkInstallReferrer()
       .then((path) => path && router.push(path as Href))
       .catch(() => {});
+  }, [loaded, navReady]);
+
+  // Dotknięcie przypomnienia: ekran przystanku (albo Start) – także gdy aplikacja była zamknięta.
+  useEffect(() => {
+    if (!loaded || !navReady) return;
+    const open = (r: Notifications.NotificationResponse | null) => {
+      const url = reminderUrl(r);
+      if (!url) return;
+      Notifications.clearLastNotificationResponse();
+      if (url !== '/') router.push(url as Href);
+    };
+    open(Notifications.getLastNotificationResponse());
+    const sub = Notifications.addNotificationResponseReceivedListener(open);
+    return () => sub.remove();
   }, [loaded, navReady]);
 
   if (!loaded) return null;

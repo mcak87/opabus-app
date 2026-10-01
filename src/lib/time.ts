@@ -43,6 +43,22 @@ export function addDays(day: ServiceDay, n: number): ServiceDay {
   return ymd(y, m, d + n);
 }
 
+/** Chwila (ms od 1970) dla dnia rozkładu i sekund od północy czasu ateńskiego (sekundy mogą przekraczać 24 h). */
+export function athensEpoch(day: ServiceDay, sec: number): number {
+  const wall = (d: ServiceDay, s: number) =>
+    Date.UTC(Math.floor(d.date / 10000), Math.floor((d.date % 10000) / 100) - 1, d.date % 100) / 1000 + s;
+  const target = wall(day, sec);
+  // Zaczynamy od UTC+2 i poprawiamy o różnicę (czas letni/zimowy, także przy zmianie czasu w nocy).
+  let t = target - 2 * 3600;
+  for (let i = 0; i < 3; i++) {
+    const n = athensNow(new Date(t * 1000));
+    const diff = target - wall(n, n.sec);
+    if (!diff) break;
+    t += diff;
+  }
+  return t * 1000;
+}
+
 const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Sekundy od północy (mogą przekraczać 24 h) → „HH:MM”. */

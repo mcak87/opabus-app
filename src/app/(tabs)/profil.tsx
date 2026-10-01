@@ -2,27 +2,42 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
 import { MapOfflineRow } from '@/components/MapOfflineRow';
 import { RegionList } from '@/components/RegionList';
+import { ExactAlarmHint } from '@/components/ReminderButton';
 import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { lodgingStopName } from '@/data/lodging';
 import { hasTranslation, LANGS, setLang, t, useLang } from '@/i18n';
-import { setLodging, useSettings } from '@/lib/settings';
+import { cancelReminder, ensurePermission } from '@/lib/reminders';
+import { setLodging, setRemindLastBus, useSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/time';
 
 export default function ProfileScreen() {
   const lang = useLang();
   const insets = useSafeAreaInsets();
   const data = useData();
-  const { lodging } = useSettings();
+  const { lodging, remindLastBus } = useSettings();
   const [showLangs, setShowLangs] = useState(false);
+  const [remindMsg, setRemindMsg] = useState(false);
   const openLodging = () => router.push({ pathname: '/planer/szukaj', params: { field: 'lodging' } });
+
+  const toggleRemind = async (on: boolean) => {
+    setRemindMsg(false);
+    if (!on) {
+      setRemindLastBus(false);
+      cancelReminder('lastBus');
+      return;
+    }
+    // Zgoda na powiadomienia od razu – samo przypomnienie ustawi się przy najbliższym otwarciu ekranu Start.
+    if ((await ensurePermission()) === 'granted') setRemindLastBus(true);
+    else setRemindMsg(true);
+  };
 
   const installed = Object.values(data.installed).sort((a, b) => data.regionName(a.region).localeCompare(data.regionName(b.region)));
 
@@ -60,11 +75,59 @@ export default function ProfileScreen() {
             </Txt>
           </Pressable>
           {lodging ? (
-            <Pressable accessibilityRole="button" accessibilityLabel={t('lodgingRemove')} onPress={() => setLodging(null)} style={s.del}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t('lodgingRemove')}
+              onPress={() => {
+                setLodging(null);
+                cancelReminder('lastBus');
+              }}
+              style={s.del}>
               <Icon name="trash" size={20} color={C.muted} />
             </Pressable>
           ) : null}
         </View>
+
+        {/* Przypomnienie o ostatnim autobusie do noclegu (projekt: canvas „Profil”). */}
+        {lodging ? (
+          <View style={s.card}>
+            <View style={s.menuRow}>
+              <Icon name="bell" size={22} color={C.blue} />
+              <View style={{ flex: 1, paddingVertical: 10 }}>
+                <Txt w="extrabold" size={16} color={C.ink}>
+                  {t('remindLastSetting')}
+                </Txt>
+                <Txt w="semibold" size={13} color={C.muted}>
+                  {t('remindLastSettingSub')}
+                </Txt>
+              </View>
+              <Switch
+                accessibilityLabel={t('remindLastSetting')}
+                value={remindLastBus}
+                onValueChange={toggleRemind}
+                trackColor={{ true: C.blue, false: '#C4CCE0' }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+            {remindLastBus ? (
+              <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}>
+                <ExactAlarmHint />
+              </View>
+            ) : null}
+            {remindMsg ? (
+              <View style={s.remindMsg}>
+                <Txt w="bold" size={13} color={C.orangeText} style={{ flex: 1, lineHeight: 18 }}>
+                  {t('remindNoPermission')}
+                </Txt>
+                <Pressable accessibilityRole="button" onPress={() => Linking.openSettings()} hitSlop={8}>
+                  <Txt w="extrabold" size={13} color={C.blue}>
+                    {t('openSettings')}
+                  </Txt>
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
 
         <View style={s.card}>
           <Pressable accessibilityRole="button" onPress={() => setShowLangs((x) => !x)} style={s.menuRow}>
@@ -190,6 +253,7 @@ const s = StyleSheet.create({
   dl: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   del: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
   lodgingCard: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+  remindMsg: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingBottom: 12 },
   lodgingMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, minHeight: 76 },
   lodgingIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.orange, alignItems: 'center', justifyContent: 'center' },
 });

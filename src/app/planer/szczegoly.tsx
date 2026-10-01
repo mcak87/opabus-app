@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
+import { ReminderButton } from '@/components/ReminderButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { stopName } from '@/components/TripOption';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, lineColor, shadow } from '@/constants/theme';
 import { modeOf } from '@/data/queries';
 import { getLang, t, useLang } from '@/i18n';
-import { hhmm } from '@/lib/time';
+import { athensEpoch, hhmm, type ServiceDay } from '@/lib/time';
 import { tripPrices, type Price } from '@/planner/fares';
 import { duration, placeName, priceText } from '@/planner/format';
 import type { Net, RideLeg, WalkLeg } from '@/planner/raptor';
@@ -94,12 +95,43 @@ export default function TripDetails() {
             </Txt>
           </View>
         ) : null}
+
+        {/* Przypomnienie 5 min przed wyjściem (projekt: canvas „Szczegóły trasy” – „Przypomnij 10:13”). */}
+        {rideLegs[0] ? <TripReminder region={trip.region} net={net} leave={o.leave} day={trip.result.day} ride={rideLegs[0]} firstWalk={o.legs[0]?.kind === 'walk' ? o.legs[0].sec : 0} /> : null}
       </ScrollView>
     </View>
   );
 }
 
 const mins = (l: WalkLeg) => Math.max(1, Math.round(l.sec / 60));
+
+const LEAVE_BEFORE = 5 * 60;
+
+function TripReminder({ region, net, leave, day, ride, firstWalk }: { region: string; net: Net; leave: number; day: ServiceDay; ride: RideLeg; firstWalk: number }) {
+  const r = net.routes.get(net.patterns[ride.pattern].route);
+  const line = r?.shortName || r?.longName || '';
+  const stop = stopName(net, ride.board);
+  const dep = time(ride.dep, ride.depEst);
+  const walk = firstWalk >= 60;
+  // Pełna minuta (wyjście liczone z dojściem ma sekundy).
+  const remindSec = Math.floor((leave - LEAVE_BEFORE) / 60) * 60;
+  return (
+    <View style={{ marginTop: 12 }}>
+      <ReminderButton
+        rkey={`plan:${region}:${ride.trip}:${day.date}:${leave}`}
+        at={athensEpoch(day, remindSec)}
+        label={t('remindAt', { time: hhmm(remindSec) })}
+        title={walk ? t('remindLeaveTitle', { min: LEAVE_BEFORE / 60 }) : t('remindDepTitle', { line, time: dep })}
+        body={
+          walk
+            ? t('remindLeaveBody', { line, time: dep, stop, walk: Math.round(firstWalk / 60) })
+            : t('remindDepBody', { stop, headsign: net.patterns[ride.pattern].headsign })
+        }
+        url={`/stop/${region}/${net.stops[ride.board].station}`}
+      />
+    </View>
+  );
+}
 
 function Point({ time: tm, title, kicker, color, last }: { time: string; title: string; kicker: string; color: string; last?: boolean }) {
   return (

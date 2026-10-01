@@ -7,6 +7,7 @@ const K_ONBOARDED = 'settings.onboarded.v1';
 const K_HOME = 'settings.homeRegion.v1';
 const K_FAVS = 'favorites.v1';
 const K_LODGING = 'lodging.v1';
+const K_REMIND_LAST = 'settings.remindLastBus.v1';
 
 export type Favorite = { region: string; station: number; name: string; name_en: string };
 /** „Mój nocleg”: punkt w regionie i najbliższy przystanek (do nazwy na ekranie). */
@@ -19,6 +20,8 @@ export type Settings = {
   homeRegion: string | null;
   favorites: Favorite[];
   lodging: Lodging | null;
+  /** Przypomnienie 30 min przed ostatnim autobusem do noclegu (Profil). */
+  remindLastBus: boolean;
 };
 
 function readLodging(): Lodging | null {
@@ -45,6 +48,7 @@ let state: Settings = {
   homeRegion: Storage.getItemSync(K_HOME),
   favorites: readFavorites(),
   lodging: readLodging(),
+  remindLastBus: Storage.getItemSync(K_REMIND_LAST) === '1',
 };
 const listeners = new Set<() => void>();
 
@@ -82,6 +86,11 @@ export function setLodging(lodging: Lodging | null) {
   if (lodging) Storage.setItemSync(K_LODGING, JSON.stringify(lodging));
   else Storage.removeItemSync(K_LODGING);
   update({ lodging });
+}
+
+export function setRemindLastBus(on: boolean) {
+  Storage.setItemSync(K_REMIND_LAST, on ? '1' : '0');
+  update({ remindLastBus: on });
 }
 
 const favKey = (region: string, station: number) => `${region}:${station}`;

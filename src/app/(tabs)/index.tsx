@@ -210,7 +210,7 @@ export default function StartScreen() {
           </Card>
         ) : null}
 
-        {mode === 'nearby' && point && lodgingRegion ? <LodgingReturn region={lodgingRegion} from={point} fromPlace={{ kind: 'me' }} /> : null}
+        {mode === 'nearby' && point && lodgingRegion ? <LodgingReturn region={lodgingRegion} from={point} fromPlace={{ kind: 'me' }} remind /> : null}
         {mode === 'nearby' ? <LodgingPrompt /> : null}
 
         {mode === 'nearby' && items ? (

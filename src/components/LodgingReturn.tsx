@@ -11,8 +11,9 @@ import { lodgingPlace } from '@/data/lodging';
 import { modeOf } from '@/data/queries';
 import { t, useLang } from '@/i18n';
 import { distanceM, walkMinutes, type LatLon } from '@/lib/geo';
+import { cancelReminder, getReminder, setReminder } from '@/lib/reminders';
 import { useSettings } from '@/lib/settings';
-import { hhmm } from '@/lib/time';
+import { athensEpoch, athensNow, hhmm } from '@/lib/time';
 import type { Journey, Net, RideLeg } from '@/planner/raptor';
 import { lastReturn } from '@/planner/service';
 import { setFrom, setTo, setWhen, type Place } from '@/planner/store';
@@ -29,9 +30,43 @@ const K_PROMPT_HIDDEN = 'lodging.promptHidden.v1';
 /** Przeliczamy co 5 minut albo po zmianie miejsca o ok. 100 m. */
 const SLOT_MS = 5 * 60_000;
 
-export function LodgingReturn({ region, from, fromStation, fromPlace }: { region: string; from: LatLon; fromStation?: number; fromPlace: Place }) {
+/** Przypomnienie o ostatnim autobusie – tyle przed odjazdem (canvas „Profil”: 30 min). */
+const LAST_BUS_BEFORE = 30 * 60;
+
+/**
+ * Przypomnienie „Za 30 min ostatni autobus do noclegu” na podstawie powrotu policzonego z obecnego miejsca.
+ * Ustawiane przy każdym otwarciu ekranu Start (bez śledzenia w tle), anulowane, gdy dziś już nic nie jedzie albo jesteśmy pod domem.
+ */
+async function syncLastBusReminder(net: Net, j: Journey | null) {
+  const ride = j?.legs.find((l): l is RideLeg => l.kind === 'ride');
+  if (!j || !ride) return cancelReminder('lastBus');
+  const at = athensEpoch(athensNow(), ride.dep - LAST_BUS_BEFORE);
+  if (getReminder('lastBus')?.at === at) return;
+  const route = net.routes.get(net.patterns[ride.pattern].route);
+  const walk = j.legs[0]?.kind === 'walk' && j.legs[0].sec >= 60 ? Math.round(j.legs[0].sec / 60) : 0;
+  const body =
+    t('remindLastBody', { time: hhmm(ride.dep), line: route?.shortName || route?.longName || '', stop: stopName(net, ride.board) }) +
+    (walk ? t('remindWalkSuffix', { min: walk }) : '');
+  const r = await setReminder('lastBus', at, { title: t('remindLastTitle', { min: LAST_BUS_BEFORE / 60 }), body, url: '/' });
+  if (r !== 'ok') await cancelReminder('lastBus');
+}
+
+export function LodgingReturn({
+  region,
+  from,
+  fromStation,
+  fromPlace,
+  remind,
+}: {
+  region: string;
+  from: LatLon;
+  fromStation?: number;
+  fromPlace: Place;
+  /** Ustawiaj przypomnienie o ostatnim autobusie (tylko na Start – z prawdziwej lokalizacji). */
+  remind?: boolean;
+}) {
   useLang();
-  const { lodging } = useSettings();
+  const { lodging, remindLastBus } = useSettings();
   const [res, setRes] = useState<{ key: string; net: Net; journey: Journey | null } | null>(null);
   const [slot, setSlot] = useState(() => Math.floor(Date.now() / SLOT_MS));
 
@@ -44,17 +79,28 @@ export function LodgingReturn({ region, from, fromStation, fromPlace }: { region
   const lon = Math.round(from.lon * 1000) / 1000;
   const active = !!lodging && lodging.region === region && distanceM(from.lat, from.lon, lodging.lat, lodging.lon) > NEAR_HOME_M;
   const key = lodging ? `${region}:${lat}:${lon}:${lodging.lat}:${lodging.lon}:${slot}` : '';
+  const scheduling = !!remind && remindLastBus;
 
   useEffect(() => {
     if (!active || !lodging) return;
     let alive = true;
     lastReturn(region, { lat, lon }, lodging)
-      .then((r) => alive && setRes({ key, ...r }))
+      .then((r) => {
+        if (!alive) return;
+        setRes({ key, ...r });
+        if (scheduling) syncLastBusReminder(r.net, r.journey).catch(() => {});
+      })
       .catch(() => {});
     return () => {
       alive = false;
     };
-  }, [active, key, region, lat, lon, lodging]);
+  }, [active, key, region, lat, lon, lodging, scheduling]);
+
+  // Pod domem przypomnienie o powrocie nie jest potrzebne.
+  const nearHome = !!lodging && lodging.region === region && !active;
+  useEffect(() => {
+    if (scheduling && nearHome) cancelReminder('lastBus').catch(() => {});
+  }, [scheduling, nearHome]);
 
   if (!active || !lodging || !res) return null;
 
