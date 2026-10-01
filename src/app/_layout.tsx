@@ -1,12 +1,14 @@
 import { Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black, useFonts } from '@expo-google-fonts/nunito';
-import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
+import { DefaultTheme, router, Stack, ThemeProvider, useRootNavigationState, type Href } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
+import { UpdateOverlay } from '@/components/AppNotices';
 import { C } from '@/constants/theme';
 import { DataProvider } from '@/data/DataContext';
 import { useLang } from '@/i18n';
+import { checkInstallReferrer } from '@/lib/installReferrer';
 import { useSettings } from '@/lib/settings';
 
 SplashScreen.preventAutoHideAsync();
@@ -17,10 +19,19 @@ export default function RootLayout() {
   const [loaded] = useFonts({ Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black });
   const lang = useLang();
   const { onboarded } = useSettings();
+  const navReady = !!useRootNavigationState()?.key;
 
   useEffect(() => {
     if (loaded) SplashScreen.hideAsync();
   }, [loaded]);
+
+  // Instalacja z kodu QR na plakacie (Android): od razu odjazdy z tego przystanku, gdy nawigacja jest gotowa.
+  useEffect(() => {
+    if (!loaded || !navReady) return;
+    checkInstallReferrer()
+      .then((path) => path && router.push(path as Href))
+      .catch(() => {});
+  }, [loaded, navReady]);
 
   if (!loaded) return null;
 
@@ -40,6 +51,7 @@ export default function RootLayout() {
           <Stack.Screen name="trip/[region]/[trip]" />
           <Stack.Screen name="s/[region]/[stops]" />
         </Stack>
+        <UpdateOverlay />
       </DataProvider>
     </ThemeProvider>
   );

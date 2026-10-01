@@ -222,4 +222,10 @@ export const en: Record<keyof typeof pl, string> = {
   trolleybus: 'Trolleybus',
   errorGeneric: 'Something went wrong. Please try again.',
   back: 'Back',
+  updateTitle: 'New OpaBus version',
+  updateBody: 'Update the app to keep downloading current timetables. Timetables saved on your phone also work without updating.',
+  updateNow: 'Update',
+  updateLater: 'Not now',
+  updateBanner: 'A new OpaBus version is available – update to keep downloading current timetables.',
+  noticeMore: 'More',
 };

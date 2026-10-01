@@ -5,6 +5,7 @@ import { getLang } from '@/i18n';
 import { bboxArea, inBbox, type LatLon } from '@/lib/geo';
 import { getSettings, setHomeRegion } from '@/lib/settings';
 
+import { refreshAppConfig } from './appConfig';
 import { fetchFares, removeFares } from './fares';
 import { deleteMap, downloadMap, loadMapPacks } from './offlineMaps';
 import {
@@ -54,6 +55,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
+    // Ustawienia ze strony (komunikat, minimalna wersja) – bez internetu zostaje ostatnia zapisana wersja.
+    refreshAppConfig().catch(() => {});
     Promise.all([fetchManifest(), fetchRegionGroups().catch(() => null)])
       .then(([m, g]) => {
         if (!alive) return;

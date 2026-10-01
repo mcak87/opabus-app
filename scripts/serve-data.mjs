@@ -2,7 +2,7 @@
 // https://opabus.com/data/v1/ (paczki offline, lista regionów, ustawienia). Bez zależności – tylko Node 24.
 //   npm run dane            → folder domyślny (strona-opabus w projekcie OpaBus)
 //   npm run dane -- <folder strona-opabus>
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize, resolve } from 'node:path';
@@ -22,7 +22,12 @@ const DYNAMIC = {
     const { GROUPS } = await import(pathToFileURL(join(SITE, 'src', 'data', 'regions.ts')).href);
     return { version: 1, updated: new Date().toISOString(), groups: GROUPS };
   },
-  '/data/v1/app-config.json': async () => ({ version: 1, minVersion: { android: '0.0.0', ios: '0.0.0' }, notice: null }),
+  // Do testów komunikatu i prośby o aktualizację: scripts/dev-app-config.json (poza gitem) nadpisuje te wartości.
+  '/data/v1/app-config.json': async () => {
+    const own = join(import.meta.dirname, 'dev-app-config.json');
+    const base = { version: 1, minVersion: { android: '0.0.0', ios: '0.0.0' }, notice: null };
+    return existsSync(own) ? { ...base, ...JSON.parse(readFileSync(own, 'utf8')) } : base;
+  },
   '/data/v1/news.json': async () => ({ version: 1, items: [] }),
 };
 

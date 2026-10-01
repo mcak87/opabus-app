@@ -221,4 +221,11 @@ export const pl = {
   trolleybus: 'Trolejbus',
   errorGeneric: 'Coś poszło nie tak. Spróbuj ponownie.',
   back: 'Wróć',
+  // Ustawienia ze strony: aktualizacja i komunikat
+  updateTitle: 'Nowa wersja OpaBus',
+  updateBody: 'Zaktualizuj aplikację, żeby dalej pobierać aktualne rozkłady. Rozkłady zapisane w telefonie działają też bez aktualizacji.',
+  updateNow: 'Zaktualizuj',
+  updateLater: 'Nie teraz',
+  updateBanner: 'Jest nowa wersja OpaBus – zaktualizuj, żeby pobierać aktualne rozkłady.',
+  noticeMore: 'Więcej',
 };

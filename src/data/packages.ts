@@ -47,7 +47,7 @@ const K_MANIFEST = 'data.manifest.v1';
 const K_REGIONS = 'data.regions.v1';
 const K_PKG = 'data.pkg.v1.';
 
-async function getJson<T>(path: string): Promise<T> {
+export async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(`${DATA_URL}${path}`, { headers: { 'Cache-Control': 'no-cache' } });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${path}`);
   return (await res.json()) as T;

@@ -12,13 +12,15 @@ import { stationIdForStopCode } from '@/data/queries';
 import { t } from '@/i18n';
 
 export default function QrLinkScreen() {
-  const { region, stops, h } = useLocalSearchParams<{ region: string; stops: string; h?: string }>();
+  const { region, stops, h, src } = useLocalSearchParams<{ region: string; stops: string; h?: string; src?: string }>();
   const data = useData();
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
+    // Pierwsze uruchomienie po instalacji z kodu QR liczy się jako install_android (lib/installReferrer), nie app_open.
+    if (src === 'install') return;
     fetch(`${DATA_URL}/api/hit`, { method: 'POST', body: JSON.stringify({ e: 'app_open', h: h || '_' }) }).catch(() => {});
-  }, [h]);
+  }, [h, src]);
 
   const started = useRef(false);
   const isInstalled = !!data.installed[region];

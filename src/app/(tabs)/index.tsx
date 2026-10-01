@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, AppState, Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { StartNotices } from '@/components/AppNotices';
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { EnableLocationCard, FavoritesSection, PopularSection } from '@/components/StartSections';
@@ -180,6 +181,8 @@ export default function StartScreen() {
       {header}
 
       <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        <StartNotices />
+
         {mode === 'wait' ? (
           <View style={s.center}>
             <ActivityIndicator color={C.blue} />
