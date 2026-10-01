@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { StartNotices } from '@/components/AppNotices';
 import { Icon } from '@/components/Icon';
+import { LodgingPrompt, LodgingReturn } from '@/components/LodgingReturn';
 import { Logo } from '@/components/Logo';
 import { EnableLocationCard, FavoritesSection, PopularSection } from '@/components/StartSections';
 import { SectionTitle, StationCard } from '@/components/StationCard';
@@ -32,7 +33,7 @@ export default function StartScreen() {
   useLang();
   const insets = useSafeAreaInsets();
   const data = useData();
-  const { homeRegion } = useSettings();
+  const { homeRegion, lodging } = useSettings();
   const [loc, setLoc] = useState<Loc>({ state: 'checking' });
   const [items, setItems] = useState<StationWithDeps[] | null>(null);
   const [now, setNow] = useState(() => athensNow());
@@ -97,6 +98,8 @@ export default function StartScreen() {
     [candidates, data.installed],
   );
   const hasLocalRegion = candidates.some((c) => data.installed[c.region]);
+  /** Powrót do noclegu liczymy, gdy jesteśmy w tym samym (pobranym) regionie co nocleg. */
+  const lodgingRegion = lodging && candidates.some((c) => c.region === lodging.region && data.installed[c.region]) ? lodging.region : null;
   const installedRegions = Object.keys(data.installed).filter((r) => !OVERLAY_REGIONS.has(r));
   const manualRegion = homeRegion && data.installed[homeRegion] ? homeRegion : installedRegions[0];
   const outside = !!point && !!data.manifest && candidates.length === 0;
@@ -206,6 +209,9 @@ export default function StartScreen() {
             />
           </Card>
         ) : null}
+
+        {mode === 'nearby' && point && lodgingRegion ? <LodgingReturn region={lodgingRegion} from={point} fromPlace={{ kind: 'me' }} /> : null}
+        {mode === 'nearby' ? <LodgingPrompt /> : null}
 
         {mode === 'nearby' && items ? (
           <>

@@ -4,8 +4,8 @@ import { listInstalled, openRegion, type PackageInfo } from '@/data/packages';
 import { inBbox, type LatLon } from '@/lib/geo';
 import { addDays, athensNow } from '@/lib/time';
 
-import { plan } from './plan';
-import { loadNet, type Net } from './raptor';
+import { lastBack, plan } from './plan';
+import { dayTrips, loadNet, type Journey, type Net } from './raptor';
 import type { When } from './store';
 
 const nets = new Map<string, { version: string; net: Promise<Net> }>();
@@ -38,4 +38,16 @@ export async function planTrip(region: string, from: LatLon, to: LatLon, when: W
   // Oddajemy ekranowi chwilę na narysowanie wskaźnika ładowania, zanim policzymy trasę.
   await new Promise((r) => setTimeout(r, 30));
   return { net, at, result: plan(net, cal, { from, to, day, prev, at }) };
+}
+
+/**
+ * Ostatni powrót dziś z punktu `from` do `to` (np. do noclegu): najpóźniejszy odjazd, który jeszcze dowiezie na miejsce.
+ * Przystanki do 800 m, a gdy tam nic – do 1,5 km (jak w planerze). null = dziś autobusem już się nie da.
+ */
+export async function lastReturn(region: string, from: LatLon, to: LatLon): Promise<{ net: Net; journey: Journey | null }> {
+  const [net, { cal }] = await Promise.all([netFor(region), openRegion(region)]);
+  const now = athensNow();
+  await new Promise((r) => setTimeout(r, 30));
+  const trips = dayTrips(net, cal, now, now.prev);
+  return { net, journey: lastBack(net, trips, from, to, now.sec, 800) ?? lastBack(net, trips, from, to, now.sec, 1500) };
 }

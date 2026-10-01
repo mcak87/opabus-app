@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
+import { LodgingReturn } from '@/components/LodgingReturn';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
@@ -11,7 +12,8 @@ import { minutesTo, stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { lastDeparturesToday, stationById, stationDepartures, stationStops, type Departure, type RegionMeta, type Station } from '@/data/queries';
 import { t, useLang } from '@/i18n';
-import { isFavorite, toggleFavorite, useSettings } from '@/lib/settings';
+import { distanceM } from '@/lib/geo';
+import { isFavorite, setLodging, toggleFavorite, useSettings } from '@/lib/settings';
 import { athensNow, formatDate, type Now } from '@/lib/time';
 
 const STEP = 3 * 3600;
@@ -27,7 +29,7 @@ export default function StopScreen() {
   const [span, setSpan] = useState(STEP);
   const [error, setError] = useState(false);
   const [approx, setApprox] = useState(false);
-  const { favorites } = useSettings();
+  const { favorites, lodging } = useSettings();
 
   const load = useCallback(async () => {
     try {
@@ -58,6 +60,7 @@ export default function StopScreen() {
   const expired = meta && meta.validTo > 0 && meta.validTo < now.date;
   const fav = isFavorite(favorites, region, Number(station));
   const openFix = () => router.push({ pathname: '/popraw/[region]/[station]', params: { region, station: String(station) } });
+  const isLodgingStop = !!st && !!lodging && lodging.region === region && distanceM(st.lat, st.lon, lodging.lat, lodging.lon) < 150;
 
   const star = st ? (
     <Pressable
@@ -78,6 +81,15 @@ export default function StopScreen() {
           <Txt w="bold" size={13} color={expired ? C.orangeText : C.muted} style={{ paddingHorizontal: 8 }}>
             {expired ? t('timetableExpired', { date: formatDate(meta.validTo) }) : t('timetableValid', { date: formatDate(meta.validTo) })}
           </Txt>
+        ) : null}
+
+        {st ? (
+          <LodgingReturn
+            region={region}
+            from={{ lat: st.lat, lon: st.lon }}
+            fromStation={st.id}
+            fromPlace={{ kind: 'station', region, id: st.id, name: st.name, name_en: st.name_en, lat: st.lat, lon: st.lon }}
+          />
         ) : null}
 
         {!deps && !error ? <ActivityIndicator color={C.blue} style={{ marginTop: 24 }} /> : null}
@@ -170,6 +182,25 @@ export default function StopScreen() {
               </Txt>
             </Pressable>
           )
+        ) : null}
+        {st && isLodgingStop ? (
+          <View style={s.fixLink}>
+            <Icon name="home" size={16} color={C.green} />
+            <Txt w="bold" size={13} color={C.green}>
+              {t('lodgingIsHere')}
+            </Txt>
+          </View>
+        ) : st && !lodging ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setLodging({ region, lat: st.lat, lon: st.lon, near: { name: st.name, name_en: st.name_en } })}
+            style={s.fixLink}
+            hitSlop={6}>
+            <Icon name="home" size={16} color={C.blue} />
+            <Txt w="bold" size={13} color={C.blue}>
+              {t('lodgingSetStop')}
+            </Txt>
+          </Pressable>
         ) : null}
       </ScrollView>
     </View>

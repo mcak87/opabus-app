@@ -1,5 +1,6 @@
-// Profil – język, regiony offline (pobieranie, aktualizacja, usuwanie), źródła danych.
+// Profil – mój nocleg, język, regiony offline (pobieranie, aktualizacja, usuwanie), źródła danych.
 import Constants from 'expo-constants';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,14 +11,18 @@ import { RegionList } from '@/components/RegionList';
 import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
+import { lodgingStopName } from '@/data/lodging';
 import { hasTranslation, LANGS, setLang, t, useLang } from '@/i18n';
+import { setLodging, useSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/time';
 
 export default function ProfileScreen() {
   const lang = useLang();
   const insets = useSafeAreaInsets();
   const data = useData();
+  const { lodging } = useSettings();
   const [showLangs, setShowLangs] = useState(false);
+  const openLodging = () => router.push({ pathname: '/planer/szukaj', params: { field: 'lodging' } });
 
   const installed = Object.values(data.installed).sort((a, b) => data.regionName(a.region).localeCompare(data.regionName(b.region)));
 
@@ -33,6 +38,34 @@ export default function ProfileScreen() {
       </PanoramaHeader>
 
       <ScrollView contentContainerStyle={s.body}>
+        {/* Mój nocleg (projekt: canvas „Profil”) – ostatni autobus powrotny na Start i przy każdym przystanku. */}
+        <View style={[s.card, s.lodgingCard]}>
+          <Pressable accessibilityRole="button" onPress={openLodging} style={s.lodgingMain}>
+            <View style={s.lodgingIcon}>
+              <Icon name="home" size={22} color="#FFFFFF" stroke={2.2} />
+            </View>
+            <View style={{ flex: 1, gap: 1 }}>
+              <Txt w="bold" size={13} color={C.muted}>
+                {t('lodgingTitle')}
+              </Txt>
+              <Txt w="extrabold" size={17} color={C.ink} numberOfLines={1}>
+                {lodging ? (lodgingStopName(lodging) ?? t('lodgingPoint')) : t('lodgingNotSet')}
+              </Txt>
+              <Txt w="semibold" size={13} color={C.muted} style={{ lineHeight: 18 }}>
+                {lodging ? `${t('lodgingHint')} · ${data.regionName(lodging.region)}` : t('lodgingHintEmpty')}
+              </Txt>
+            </View>
+            <Txt w="extrabold" size={15} color={C.blue}>
+              {lodging ? t('lodgingChange') : t('lodgingSet')}
+            </Txt>
+          </Pressable>
+          {lodging ? (
+            <Pressable accessibilityRole="button" accessibilityLabel={t('lodgingRemove')} onPress={() => setLodging(null)} style={s.del}>
+              <Icon name="trash" size={20} color={C.muted} />
+            </Pressable>
+          ) : null}
+        </View>
+
         <View style={s.card}>
           <Pressable accessibilityRole="button" onPress={() => setShowLangs((x) => !x)} style={s.menuRow}>
             <Icon name="globe" size={22} color={C.blue} />
@@ -156,4 +189,7 @@ const s = StyleSheet.create({
   regionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 60, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
   dl: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   del: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },
+  lodgingCard: { flexDirection: 'row', alignItems: 'center', paddingRight: 12 },
+  lodgingMain: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, minHeight: 76 },
+  lodgingIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.orange, alignItems: 'center', justifyContent: 'center' },
 });

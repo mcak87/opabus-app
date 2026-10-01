@@ -6,8 +6,11 @@ import { useSyncExternalStore } from 'react';
 const K_ONBOARDED = 'settings.onboarded.v1';
 const K_HOME = 'settings.homeRegion.v1';
 const K_FAVS = 'favorites.v1';
+const K_LODGING = 'lodging.v1';
 
 export type Favorite = { region: string; station: number; name: string; name_en: string };
+/** „Mój nocleg”: punkt w regionie i najbliższy przystanek (do nazwy na ekranie). */
+export type Lodging = { region: string; lat: number; lon: number; near: { name: string; name_en: string } | null };
 
 export type Settings = {
   /** Ekran powitalny (język → lokalizacja → region) już przejdzie. */
@@ -15,7 +18,17 @@ export type Settings = {
   /** Region wybrany ręcznie – dla ekranu Start bez lokalizacji. */
   homeRegion: string | null;
   favorites: Favorite[];
+  lodging: Lodging | null;
 };
+
+function readLodging(): Lodging | null {
+  try {
+    const v = JSON.parse(Storage.getItemSync(K_LODGING) ?? 'null') as Lodging | null;
+    return v && typeof v.region === 'string' && Number.isFinite(v.lat) && Number.isFinite(v.lon) ? v : null;
+  } catch {
+    return null;
+  }
+}
 
 function readFavorites(): Favorite[] {
   try {
@@ -31,6 +44,7 @@ let state: Settings = {
   onboarded: Storage.getItemSync(K_ONBOARDED) === '1',
   homeRegion: Storage.getItemSync(K_HOME),
   favorites: readFavorites(),
+  lodging: readLodging(),
 };
 const listeners = new Set<() => void>();
 
@@ -62,6 +76,12 @@ export function setHomeRegion(region: string | null) {
   if (region) Storage.setItemSync(K_HOME, region);
   else Storage.removeItemSync(K_HOME);
   update({ homeRegion: region });
+}
+
+export function setLodging(lodging: Lodging | null) {
+  if (lodging) Storage.setItemSync(K_LODGING, JSON.stringify(lodging));
+  else Storage.removeItemSync(K_LODGING);
+  update({ lodging });
 }
 
 const favKey = (region: string, station: number) => `${region}:${station}`;

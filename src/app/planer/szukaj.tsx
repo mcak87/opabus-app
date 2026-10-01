@@ -1,17 +1,22 @@
 // Planer – wybór miejsca „Skąd” / „Dokąd” (projekt: canvas „Szukaj”): moja lokalizacja, wskazanie na mapie, przystanki.
+// field=lodging – ten sam ekran ustawia „Mój nocleg” (przystanek, punkt na mapie albo GPS „Jestem w noclegu”).
+import * as Location from 'expo-location';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon, type IconName } from '@/components/Icon';
 import { Txt } from '@/components/ui';
 import { C, F, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
+import { lodgingPlace, setLodgingAt, setLodgingFromPlace } from '@/data/lodging';
 import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { searchStations, type Station } from '@/data/queries';
-import { t, useLang } from '@/i18n';
+import { t, useLang, type Key } from '@/i18n';
+import { currentPosition } from '@/lib/position';
+import { useSettings } from '@/lib/settings';
 import { placeName } from '@/planner/format';
 import { addRecent, setFrom, setTo, usePlanner, type Place } from '@/planner/store';
 
@@ -21,10 +26,14 @@ export default function PlaceSearch() {
   useLang();
   const insets = useSafeAreaInsets();
   const data = useData();
-  const { field } = useLocalSearchParams<{ field: 'from' | 'to' }>();
+  const { field } = useLocalSearchParams<{ field: 'from' | 'to' | 'lodging' }>();
+  const forLodging = field === 'lodging';
   const { recent } = usePlanner();
+  const { lodging } = useSettings();
   const [q, setQ] = useState('');
   const [hits, setHits] = useState<Hit[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<Key | null>(null);
   const regions = Object.keys(data.installed).filter((r) => !OVERLAY_REGIONS.has(r));
 
   useEffect(() => {
@@ -48,7 +57,44 @@ export default function PlaceSearch() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, regions.join(',')]);
 
+  const packages = data.manifest?.packages ?? [];
+
+  const chooseLodging = async (p: Place) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      if (await setLodgingFromPlace(p, packages)) router.back();
+      else setMsg('lodgingOutside');
+    } catch {
+      setMsg('errorGeneric');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /** „Jestem w noclegu”: obecne położenie z GPS. */
+  const lodgingHere = async () => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      let perm = await Location.getForegroundPermissionsAsync();
+      if (!perm.granted && perm.canAskAgain) perm = await Location.requestForegroundPermissionsAsync();
+      const pos = perm.granted ? await currentPosition(12_000) : null;
+      if (!pos) setMsg('lodgingNoGps');
+      else if (await setLodgingAt({ lat: pos.coords.latitude, lon: pos.coords.longitude }, packages)) router.back();
+      else setMsg('lodgingOutside');
+    } catch {
+      setMsg('errorGeneric');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const choose = (p: Place) => {
+    if (forLodging) {
+      chooseLodging(p);
+      return;
+    }
     if (field === 'from') setFrom(p);
     else setTo(p);
     addRecent(p);
@@ -74,14 +120,14 @@ export default function PlaceSearch() {
             <Icon name="chevronL" size={22} stroke={2.4} />
           </Pressable>
           <View style={s.input}>
-            <Icon name="pin" size={20} color={field === 'from' ? C.blue : C.orange} />
+            <Icon name={forLodging ? 'home' : 'pin'} size={20} color={field === 'from' ? C.blue : C.orange} />
             <TextInput
-              autoFocus
+              autoFocus={!forLodging}
               value={q}
               onChangeText={setQ}
-              placeholder={field === 'from' ? t('planFromPlaceholder') : t('planToPlaceholder')}
+              placeholder={forLodging ? t('lodgingSearchPlaceholder') : field === 'from' ? t('planFromPlaceholder') : t('planToPlaceholder')}
               placeholderTextColor="#7A849E"
-              accessibilityLabel={field === 'from' ? t('planFromPlaceholder') : t('planToPlaceholder')}
+              accessibilityLabel={forLodging ? t('lodgingSearchPlaceholder') : field === 'from' ? t('planFromPlaceholder') : t('planToPlaceholder')}
               autoCorrect={false}
               style={s.text}
             />
@@ -93,12 +139,24 @@ export default function PlaceSearch() {
           </View>
         </View>
         <View style={s.chips}>
-          {chip('locate', t('myLocation'), () => choose({ kind: 'me' }))}
+          {forLodging ? chip('locate', t('lodgingHere'), lodgingHere) : chip('locate', t('myLocation'), () => choose({ kind: 'me' }))}
+          {!forLodging && lodging ? chip('home', t('lodgingTitle'), () => choose(lodgingPlace(lodging))) : null}
           {chip('map', t('planPickOnMap'), () => router.push({ pathname: '/planer/mapa', params: { field } }))}
         </View>
       </View>
 
       <ScrollView contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
+        {forLodging ? (
+          <Txt w="bold" size={14} color={C.text2} style={s.lodgingIntro}>
+            {t('lodgingIntro')}
+          </Txt>
+        ) : null}
+        {busy ? <ActivityIndicator color={C.blue} style={{ marginVertical: 8 }} /> : null}
+        {msg ? (
+          <Txt w="bold" size={14} color={C.orangeText} style={s.lodgingIntro}>
+            {t(msg)}
+          </Txt>
+        ) : null}
         {list && list.length === 0 ? <Txt color={C.muted}>{t('searchNothing')}</Txt> : null}
         {list && list.length ? (
           <>
@@ -178,4 +236,5 @@ const s = StyleSheet.create({
   rowLine: { borderTopWidth: 1, borderTopColor: C.lineSoft },
   stopIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   offline: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8, marginLeft: 8 },
+  lodgingIntro: { marginHorizontal: 8, lineHeight: 20 },
 });
