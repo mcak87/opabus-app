@@ -11,7 +11,14 @@ const K_REMIND_LAST = 'settings.remindLastBus.v1';
 
 export type Favorite = { region: string; station: number; name: string; name_en: string };
 /** „Mój nocleg”: punkt w regionie i najbliższy przystanek (do nazwy na ekranie). */
-export type Lodging = { region: string; lat: number; lon: number; near: { name: string; name_en: string } | null };
+export type Lodging = {
+  region: string;
+  lat: number;
+  lon: number;
+  near: { name: string; name_en: string } | null;
+  /** Nazwa hotelu, gdy wybrany z wyszukiwarki miejsc. */
+  title?: { name: string; name_en: string };
+};
 
 export type Settings = {
   /** Ekran powitalny (język → lokalizacja → region) już przejdzie. */

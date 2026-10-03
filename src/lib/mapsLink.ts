@@ -55,7 +55,44 @@ export async function resolveMapsLink(input: string, fetcher: typeof fetch = fet
     const c = parseCoords(decodeURIComponent(cont[1]));
     if (c) return c;
   }
-  const body = await res.text().catch(() => '');
-  const m = body.match(new RegExp(`!3d${NUM}!4d${NUM}`)) ?? body.match(new RegExp(`/@${NUM},${NUM}`)) ?? body.match(/center=(-?\d+\.\d+)%2C(-?\d+\.\d+)/);
-  return m ? ok(+m[1], +m[2]) : null;
+  return coordsFromHtml(await res.text().catch(() => ''));
 }
+
+/** Pierwszy adres internetowy w tekście (udostępnienie bywa w stylu „Zobacz: Hotel X https://…”). */
+export function firstUrl(text: string): string | null {
+  const m = text.match(/https?:\/\/[^\s<>"']+/i);
+  return m ? m[0].replace(/[).,;]+$/, '') : null;
+}
+
+/** Współrzędne z treści strony: Google Maps, Booking (data-atlas-latlng), schema.org „geo”, meta place:location. */
+export function coordsFromHtml(body: string): Coords | null {
+  const patterns = [
+    new RegExp(`!3d${NUM}!4d${NUM}`),
+    /data-atlas-latlng="(-?\d+\.\d+),(-?\d+\.\d+)"/,
+    /"latitude"\s*:\s*"?(-?\d+\.\d+)"?\s*,\s*"longitude"\s*:\s*"?(-?\d+\.\d+)/,
+    /place:location:latitude"\s+content="(-?\d+\.\d+)"[\s\S]{0,300}?place:location:longitude"\s+content="(-?\d+\.\d+)"/,
+    new RegExp(`/@${NUM},${NUM}`),
+    /center=(-?\d+\.\d+)%2C(-?\d+\.\d+)/,
+  ];
+  for (const p of patterns) {
+    const m = body.match(p);
+    const c = m ? ok(+m[1], +m[2]) : null;
+    if (c) return c;
+  }
+  return null;
+}
+
+/**
+ * Punkt z wklejonego albo udostępnionego tekstu: współrzędne, link Google Maps (także krótki), Booking i inne strony
+ * z mapą obiektu. null – nic nie znaleźliśmy (albo brak internetu przy linku, który trzeba otworzyć).
+ */
+export async function resolveSharedText(text: string, fetcher: typeof fetch = fetch): Promise<Coords | null> {
+  const direct = parseCoords(text);
+  if (direct) return direct;
+  const url = firstUrl(text) ?? (isShortMapsLink(text) ? text.trim() : null);
+  if (!url) return null;
+  return parseCoords(url) ?? resolveMapsLink(url, fetcher);
+}
+
+/** Czy tekst wygląda na link albo współrzędne (wtedy wyszukiwarka proponuje „punkt z linku”). */
+export const looksLikeLinkOrCoords = (text: string) => !!parseCoords(text) || !!firstUrl(text) || isShortMapsLink(text);

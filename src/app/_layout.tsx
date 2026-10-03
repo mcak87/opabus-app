@@ -12,6 +12,7 @@ import { useLang } from '@/i18n';
 import { checkInstallReferrer } from '@/lib/installReferrer';
 import { initReminders, reminderUrl } from '@/lib/reminders';
 import { useSettings } from '@/lib/settings';
+import { onShare, takeInitialShare } from '@/lib/share';
 
 SplashScreen.preventAutoHideAsync();
 initReminders();
@@ -34,6 +35,15 @@ export default function RootLayout() {
     checkInstallReferrer()
       .then((path) => path && router.push(path as Href))
       .catch(() => {});
+  }, [loaded, navReady]);
+
+  // „Udostępnij → OpaBus” z Google Maps / Bookingu (Android): ekran z położeniem udostępnionego miejsca.
+  useEffect(() => {
+    if (!loaded || !navReady) return;
+    const open = (text: string | null) => text && router.push({ pathname: '/udostepnij', params: { text } });
+    open(takeInitialShare());
+    const sub = onShare(open);
+    return () => sub.remove();
   }, [loaded, navReady]);
 
   // Dotknięcie przypomnienia: ekran przystanku (albo Start) – także gdy aplikacja była zamknięta.

@@ -7,6 +7,7 @@ import { getSettings, setHomeRegion } from '@/lib/settings';
 
 import { refreshAppConfig } from './appConfig';
 import { fetchFares, removeFares } from './fares';
+import { removePlaces, syncPlaces } from './places';
 import { deleteMap, downloadMap, loadMapPacks } from './offlineMaps';
 import {
   cachedManifest,
@@ -63,8 +64,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setManifest(m);
         if (g) setGroups(g);
         setManifestError(false);
-        // Cenniki pobranych regionów – małe pliki, odświeżane przy każdym połączeniu.
+        // Cenniki i miejsca (hotele, plaże, ulice…) pobranych regionów – małe pliki, odświeżane przy każdym połączeniu.
         Object.keys(listInstalled()).forEach((r) => fetchFares(r).catch(() => {}));
+        syncPlaces(Object.keys(listInstalled())).catch(() => {});
       })
       .catch(() => alive && setManifestError(true));
     return () => {
@@ -80,6 +82,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       try {
         await installPackage(pkg, manifest.schema);
         fetchFares(region).catch(() => {});
+        syncPlaces([region]).catch(() => {});
         const all = listInstalled();
         setInstalled(all);
         // Pierwszy pobrany region staje się „domowym” dla ekranu Start bez lokalizacji.
@@ -102,6 +105,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     await removePackage(region);
     await deleteMap(region).catch(() => {});
     removeFares(region);
+    removePlaces(region);
     const all = listInstalled();
     setInstalled(all);
     if (getSettings().homeRegion === region) {
