@@ -7,6 +7,7 @@ import { bboxArea, inBbox, type LatLon } from '@/lib/geo';
 import { getSettings, setHomeRegion } from '@/lib/settings';
 
 import { refreshAppConfig } from './appConfig';
+import { refreshNews } from './news';
 import { fetchFares, removeFares } from './fares';
 import { removePlaces, syncPlaces } from './places';
 import { deleteMap, downloadMap, loadMapPacks } from './offlineMaps';
@@ -78,8 +79,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let alive = true;
-    // Ustawienia ze strony (komunikat, minimalna wersja) – bez internetu zostaje ostatnia zapisana wersja.
+    // Ustawienia ze strony (komunikat, minimalna wersja) i „Co nowego” – bez internetu zostaje ostatnia zapisana wersja.
     refreshAppConfig().catch(() => {});
+    refreshNews().catch(() => {});
     Promise.all([fetchManifest(), fetchRegionGroups().catch(() => null)])
       .then(([m, g]) => {
         if (!alive) return;

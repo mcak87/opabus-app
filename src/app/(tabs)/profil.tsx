@@ -13,6 +13,7 @@ import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { lodgingStopName } from '@/data/lodging';
+import { useNews } from '@/data/news';
 import { hasTranslation, LANGS, setLang, t, useLang } from '@/i18n';
 import { cancelReminder, ensurePermission } from '@/lib/reminders';
 import { setLodging, setRemindLastBus, useSettings } from '@/lib/settings';
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const data = useData();
   const { lodging, remindLastBus } = useSettings();
+  const news = useNews();
   const [showLangs, setShowLangs] = useState(false);
   const [remindMsg, setRemindMsg] = useState(false);
   const openLodging = () => router.push({ pathname: '/planer/szukaj', params: { field: 'lodging' } });
@@ -161,6 +163,41 @@ export default function ProfileScreen() {
             : null}
         </View>
 
+        {/* Co nowego i Współpraca (projekt: canvas „Profil”, „Współpraca”). */}
+        <View style={s.card}>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/nowosci')} style={s.menuRow}>
+            <Icon name="news" size={22} color={C.blue} />
+            <View style={{ flex: 1, paddingVertical: 10 }}>
+              <Txt w="extrabold" size={16} color={C.ink}>
+                {t('newsTitle')}
+              </Txt>
+              <Txt w="semibold" size={13} color={C.muted}>
+                {t('newsSub')}
+              </Txt>
+            </View>
+            {news.unseen > 0 ? (
+              <View style={s.badge} accessibilityLabel={`${t('newBadge')}: ${news.unseen}`}>
+                <Txt w="black" size={13} color="#FFFFFF">
+                  {news.unseen}
+                </Txt>
+              </View>
+            ) : null}
+            <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
+          </Pressable>
+          <Pressable accessibilityRole="button" onPress={() => router.push('/wspolpraca')} style={[s.menuRow, s.menuLine]}>
+            <Icon name="people" size={22} color={C.orangeText} />
+            <View style={{ flex: 1, paddingVertical: 10 }}>
+              <Txt w="extrabold" size={16} color={C.ink}>
+                {t('partnersTitle')}
+              </Txt>
+              <Txt w="semibold" size={13} color={C.muted}>
+                {t('partnersSub')}
+              </Txt>
+            </View>
+            <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
+          </Pressable>
+        </View>
+
         <Txt w="black" size={13} color={C.muted} style={s.section}>
           {t('regionsOffline').toUpperCase()}
         </Txt>
@@ -248,6 +285,8 @@ const s = StyleSheet.create({
   cardLabel: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
   section: { paddingHorizontal: 8, marginTop: 8, letterSpacing: 0.8 },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 16 },
+  menuLine: { borderTopWidth: 1, borderTopColor: C.lineSoft },
+  badge: { minWidth: 26, height: 26, borderRadius: 13, paddingHorizontal: 7, backgroundColor: C.orangeText, alignItems: 'center', justifyContent: 'center' },
   langRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 46, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: C.lineSoft },
   regionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 60, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
   dl: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.blue, alignItems: 'center', justifyContent: 'center' },

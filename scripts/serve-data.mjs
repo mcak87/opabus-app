@@ -2,7 +2,7 @@
 // https://opabus.com/data/v1/ (paczki offline, lista regionów, ustawienia). Bez zależności – tylko Node 24.
 //   npm run dane            → folder domyślny (strona-opabus w projekcie OpaBus)
 //   npm run dane -- <folder strona-opabus>
-import { createReadStream, existsSync, readFileSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize, resolve } from 'node:path';
@@ -28,7 +28,31 @@ const DYNAMIC = {
     const base = { version: 1, minVersion: { android: '0.0.0', ios: '0.0.0' }, notice: null };
     return existsSync(own) ? { ...base, ...JSON.parse(readFileSync(own, 'utf8')) } : base;
   },
-  '/data/v1/news.json': async () => ({ version: 1, items: [] }),
+  // Jak src/pages/data/v1/news.json.ts na stronie: wpisy z src/content/news/<język>/*.md (bez draft i plików „_”).
+  '/data/v1/news.json': async () => {
+    const base = join(SITE, 'src', 'content', 'news');
+    const ROUTE = { pl: 'aktualnosci', en: 'news', el: 'nea' };
+    const items = [];
+    for (const lang of readdirSync(base)) {
+      for (const f of readdirSync(join(base, lang))) {
+        if (!f.endsWith('.md') || f.startsWith('_')) continue;
+        const head = readFileSync(join(base, lang, f), 'utf8').match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? '';
+        const fm = Object.fromEntries(
+          head
+            .split(/\r?\n/)
+            .map((l) => l.match(/^(\w+):\s*(.*)$/))
+            .filter(Boolean)
+            .map((m) => [m[1], m[2].replace(/^['"]|['"]$/g, '')]),
+        );
+        if (fm.draft === 'true') continue;
+        const slug = f.replace(/\.md$/, '');
+        const l = fm.lang ?? lang;
+        items.push({ id: `${lang}/${slug}`, key: fm.key, lang: l, title: fm.title, summary: fm.description, date: fm.date, region: fm.region ?? null, url: `https://opabus.com/${l}/${ROUTE[l]}/${slug}/` });
+      }
+    }
+    items.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    return { version: 1, items };
+  },
 };
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a);

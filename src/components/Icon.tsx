@@ -125,6 +125,34 @@ const ICONS = {
   plane: P(
     'M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z',
   ),
+  // Współpraca i „Co nowego” (projekt: canvas „Współpraca”, „Profil”)
+  qr: (
+    <>
+      <Rect x="3" y="3" width="7" height="7" rx="1" />
+      <Rect x="14" y="3" width="7" height="7" rx="1" />
+      <Rect x="3" y="14" width="7" height="7" rx="1" />
+      {P('M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3')}
+    </>
+  ),
+  camera: (
+    <>
+      {P('M4 8h3l2-3h6l2 3h3v11H4z')}
+      <Circle cx="12" cy="13" r="3.5" />
+    </>
+  ),
+  mail: (
+    <>
+      <Rect x="3" y="5" width="18" height="14" rx="2" />
+      {P('m3 7 9 6 9-6')}
+    </>
+  ),
+  people: (
+    <>
+      <Circle cx="9" cy="8" r="3.5" />
+      {P('M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6')}
+    </>
+  ),
+  news: P('M4 5h13v14a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1zM17 9h3v10a2 2 0 0 1-4 0M8 9h5M8 13h5M8 17h3'),
 } as const;
 
 export type IconName = keyof typeof ICONS;
