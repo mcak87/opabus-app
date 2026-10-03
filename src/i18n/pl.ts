@@ -343,4 +343,5 @@ export const pl = {
   newsRead: 'Czytaj dalej',
   newBadge: 'NOWE',
   newsAll: 'Wszystkie aktualności na opabus.com',
+  restartRtl: 'Aby odwrócić układ ekranu, zamknij aplikację i otwórz ją ponownie.',
 };

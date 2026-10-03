@@ -1,4 +1,4 @@
-// Powitanie, krok 1: wybór języka (12 języków; bez tłumaczenia – angielski do czasu przetłumaczenia).
+// Powitanie, krok 1: wybór języka (12 języków). Hebrajski odwraca układ ekranu dopiero po ponownym uruchomieniu.
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,7 +7,7 @@ import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
 import { Button, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
-import { hasTranslation, LANGS, setLang, t, useLang } from '@/i18n';
+import { hasTranslation, LANGS, rtlRestartNeeded, setLang, t, useLang } from '@/i18n';
 
 export default function LanguageStep() {
   const lang = useLang();
@@ -49,6 +49,11 @@ export default function LanguageStep() {
             );
           })}
         </View>
+        {rtlRestartNeeded() ? (
+          <Txt w="bold" size={14} color={C.orangeText} style={s.restart}>
+            {t('restartRtl')}
+          </Txt>
+        ) : null}
       </ScrollView>
 
       <View style={[s.bottom, { paddingBottom: insets.bottom + 16 }]}>
@@ -66,4 +71,5 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 52, paddingHorizontal: 18 },
   rowLine: { borderTopWidth: 1, borderTopColor: C.lineSoft },
   bottom: { paddingHorizontal: 24, paddingTop: 12, backgroundColor: C.header },
+  restart: { marginTop: 12, marginHorizontal: 8, lineHeight: 20 },
 });

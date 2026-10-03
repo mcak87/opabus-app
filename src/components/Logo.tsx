@@ -23,7 +23,8 @@ export function Logo() {
 }
 
 const s = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  // Znak firmowy wygląda zawsze tak samo – także w układzie od prawej (hebrajski).
+  row: { flexDirection: 'row', alignItems: 'center', gap: 6, direction: 'ltr' },
   word: { letterSpacing: -0.5 },
   shout: { marginLeft: -4, marginTop: -16 },
 });

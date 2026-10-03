@@ -7,7 +7,7 @@ import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
 import { loadFavoriteDepartures, loadPopular, stationNames } from '@/data/nearby';
 import type { Departure, Station } from '@/data/queries';
-import { t } from '@/i18n';
+import { t, upper } from '@/i18n';
 import { useSettings } from '@/lib/settings';
 import { athensNow } from '@/lib/time';
 
@@ -93,7 +93,7 @@ export function PopularSection({ region }: { region: string }) {
   return (
     <>
       <Txt w="black" size={12} color={C.muted} style={s.kicker}>
-        {t('popularIn', { name: data.regionName(region) }).toUpperCase()}
+        {upper(t('popularIn', { name: data.regionName(region) }))}
       </Txt>
       <View style={s.listCard}>
         {items.map((st, i) => {

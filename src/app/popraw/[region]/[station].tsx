@@ -14,7 +14,7 @@ import { C, F, shadow } from '@/constants/theme';
 import { stationNames } from '@/data/nearby';
 import { DATA_URL, openRegion } from '@/data/packages';
 import { stationById, stationStops, type Station, type StationStop } from '@/data/queries';
-import { getLang, t, useLang, type Key } from '@/i18n';
+import { arrow, getLang, t, useLang, type Key } from '@/i18n';
 import { distanceM } from '@/lib/geo';
 import { isShortMapsLink, parseCoords, resolveMapsLink } from '@/lib/mapsLink';
 import { takePickedPoint } from '@/lib/pickedPoint';
@@ -189,7 +189,7 @@ export default function FixStopScreen() {
             <Txt w="black" size={15} color={C.ink}>
               {t('fixWhich')}
             </Txt>
-            {[{ code: '', label: t('fixWhole') }, ...stops.map((x) => ({ code: x.code, label: x.headsigns.length ? `→ ${x.headsigns.slice(0, 2).join(', ')}` : x.code }))].map((o) => (
+            {[{ code: '', label: t('fixWhole') }, ...stops.map((x) => ({ code: x.code, label: x.headsigns.length ? `${arrow()} ${x.headsigns.slice(0, 2).join(', ')}` : x.code }))].map((o) => (
               <Pressable key={o.code || '_'} accessibilityRole="radio" accessibilityState={{ selected: code === o.code }} onPress={() => setCode(o.code)} style={s.option}>
                 <View style={[s.radio, code === o.code && s.radioOn]} />
                 <Txt w="bold" size={15} color={C.ink} style={{ flex: 1 }} numberOfLines={2}>

@@ -16,7 +16,7 @@ import { useData } from '@/data/DataContext';
 import { cachedFares, fetchFares } from '@/data/fares';
 import { openRegion, type PackageInfo } from '@/data/packages';
 import { modeOf } from '@/data/queries';
-import { getLang, t, useLang, type Key } from '@/i18n';
+import { arrow, getLang, t, useLang, type Key } from '@/i18n';
 import type { LatLon } from '@/lib/geo';
 import { currentPosition } from '@/lib/position';
 import { athensNow, formatDate, hhmm } from '@/lib/time';
@@ -118,7 +118,7 @@ export default function ResultsScreen() {
         </Pressable>
         <View style={{ flex: 1, gap: 2 }}>
           <Txt w="black" size={19} color={C.ink} numberOfLines={2}>
-            {placeName(from)} → {placeName(to)}
+            {placeName(from)} {arrow()} {placeName(to)}
           </Txt>
           <View style={s.subRow}>
             <Txt w="bold" size={14} color={C.muted}>

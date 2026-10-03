@@ -9,7 +9,7 @@ import { Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
 import { markNewsSeen, refreshNews, seenNewsKeys, useNews } from '@/data/news';
-import { t, useLang } from '@/i18n';
+import { arrow, t, useLang } from '@/i18n';
 import { openSite, sitePage } from '@/lib/site';
 import { formatDate } from '@/lib/time';
 
@@ -81,7 +81,7 @@ export default function NewsScreen() {
               </Txt>
             ) : null}
             <Txt w="extrabold" size={14} color={C.blue}>
-              {`${t('newsRead')} →`}
+              {`${t('newsRead')} ${arrow()}`}
             </Txt>
           </Pressable>
         ))}

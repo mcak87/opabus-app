@@ -10,7 +10,7 @@ import { stopName } from '@/components/TripOption';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, lineColor, shadow } from '@/constants/theme';
 import { modeOf } from '@/data/queries';
-import { getLang, pluralKey, t, useLang } from '@/i18n';
+import { arrow, getLang, pluralKey, t, useLang } from '@/i18n';
 import { athensEpoch, hhmm, type ServiceDay } from '@/lib/time';
 import { tripPrices, type Price } from '@/planner/fares';
 import { duration, hhmmDay, patternLabel, placeName, priceText } from '@/planner/format';
@@ -49,7 +49,7 @@ export default function TripDetails() {
         region={trip.region}
         kicker={t('tripDetails')}
         title={`${hhmm(o.leave)} – ${hhmmDay(o.arrive)}`}
-        sub={`${placeName(trip.from)} → ${placeName(trip.to)} · ${duration(o.arrive - o.leave)}`}
+        sub={`${placeName(trip.from)} ${arrow()} ${placeName(trip.to)} · ${duration(o.arrive - o.leave)}`}
       />
       <ScrollView contentContainerStyle={s.body}>
         <View style={s.card}>

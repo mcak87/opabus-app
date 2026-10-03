@@ -1,4 +1,5 @@
 // Ikony liniowe (styl z projektu ekranów). Nazwa → ścieżki SVG w siatce 24×24.
+import { I18nManager } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 const P = (d: string) => <Path d={d} />;
@@ -179,11 +180,16 @@ export function Icon({
       stroke={color}
       strokeWidth={stroke}
       strokeLinecap="round"
-      strokeLinejoin="round">
+      strokeLinejoin="round"
+      style={I18nManager.isRTL && MIRRORED.has(name) ? MIRROR : undefined}>
       {ICONS[name]}
     </Svg>
   );
 }
+
+/** W układzie od prawej (hebrajski) „wstecz” i „dalej” wskazują w drugą stronę. */
+const MIRRORED = new Set<IconName>(['chevronL', 'chevronR']);
+const MIRROR = { transform: [{ scaleX: -1 }] };
 
 export const MODE_ICON: Record<string, IconName> = {
   bus: 'bus',

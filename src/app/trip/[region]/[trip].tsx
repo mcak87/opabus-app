@@ -10,7 +10,7 @@ import { C } from '@/constants/theme';
 import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { tripTimeline, type TripStop } from '@/data/queries';
-import { t, useLang } from '@/i18n';
+import { arrow, t, useLang } from '@/i18n';
 
 const REMIND_BEFORE_MS = 5 * 60_000;
 
@@ -33,7 +33,7 @@ export default function TripScreen() {
         `SELECT r.short_name, r.long_name, p.headsign FROM trips t JOIN patterns p ON p.id = t.pattern_id JOIN routes r ON r.id = p.route_id WHERE t.id = ?`,
         [Number(trip)],
       );
-      setTitle(route[0] ? `${route[0].short_name || route[0].long_name} → ${route[0].headsign}` : '');
+      setTitle(route[0] ? `${route[0].short_name || route[0].long_name} ${arrow()} ${route[0].headsign}` : '');
       setLineLabel(route[0] ? route[0].short_name || route[0].long_name : '');
       setHeadsign(route[0]?.headsign ?? '');
       setStops(tl);

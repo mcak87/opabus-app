@@ -1,7 +1,7 @@
 // Teksty planera: nazwy miejsc, czas trwania, rodzaj pojazdu, linia, dzień.
 import { stationNames } from '@/data/nearby';
 import { lineLabel, modeOf } from '@/data/queries';
-import { getLang, t, type Key } from '@/i18n';
+import { decimal, t, type Key } from '@/i18n';
 import { formatDate, hhmm, type ServiceDay } from '@/lib/time';
 
 import type { Price } from './fares';
@@ -43,7 +43,7 @@ export function dayName(day: ServiceDay, daysAhead: number): string {
   return `${t(`wd${day.weekday}` as Key)} ${formatDate(day.date).slice(0, 5)}`;
 }
 
-const eur = (v: number) => (getLang() === 'en' ? v.toFixed(2) : v.toFixed(2).replace('.', ','));
+const eur = (v: number) => decimal(v.toFixed(2));
 
 /** „6,00 €”, „do 6,00 €”, „ok. 2,30–3,00 €”, „cena u kierowcy” / „cena u przewoźnika” (zasady z README_ceny_Rodos.md). */
 export function priceText(p: Price): string {

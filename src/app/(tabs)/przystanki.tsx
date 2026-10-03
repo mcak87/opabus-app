@@ -12,7 +12,7 @@ import { useData } from '@/data/DataContext';
 import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { searchStations, type Station } from '@/data/queries';
-import { t, useLang } from '@/i18n';
+import { t, upper, useLang } from '@/i18n';
 import { IS_EXPO_GO } from '@/lib/runtime';
 import { useSettings } from '@/lib/settings';
 
@@ -129,7 +129,7 @@ export default function StopsScreen() {
           {hits && hits.length === 0 ? <Txt color={C.muted}>{t('searchNothing')}</Txt> : null}
           {!hits && regions.length > 0 ? (
             <Txt w="black" size={12} color={C.muted} style={s.kicker}>
-              {t('favorites').toUpperCase()}
+              {upper(t('favorites'))}
             </Txt>
           ) : null}
           {!hits && regions.length > 0 && favRows.length === 0 ? (

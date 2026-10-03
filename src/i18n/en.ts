@@ -339,4 +339,5 @@ export const en: Record<keyof typeof pl, string> = {
   newsRead: 'Read more',
   newBadge: 'NEW',
   newsAll: 'All news on opabus.com',
+  restartRtl: 'To flip the screen layout, close the app and open it again.',
 };

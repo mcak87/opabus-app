@@ -14,7 +14,7 @@ import { C, shadow } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { lodgingStopName } from '@/data/lodging';
 import { useNews } from '@/data/news';
-import { hasTranslation, LANGS, setLang, t, useLang } from '@/i18n';
+import { hasTranslation, LANGS, rtlRestartNeeded, setLang, t, upper, useLang } from '@/i18n';
 import { cancelReminder, ensurePermission } from '@/lib/reminders';
 import { setLodging, setRemindLastBus, useSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/time';
@@ -161,6 +161,13 @@ export default function ProfileScreen() {
                 </Pressable>
               ))
             : null}
+          {rtlRestartNeeded() ? (
+            <View style={s.remindMsg}>
+              <Txt w="bold" size={13} color={C.orangeText} style={{ flex: 1, lineHeight: 18 }}>
+                {t('restartRtl')}
+              </Txt>
+            </View>
+          ) : null}
         </View>
 
         {/* Co nowego i Współpraca (projekt: canvas „Profil”, „Współpraca”). */}
@@ -199,7 +206,7 @@ export default function ProfileScreen() {
         </View>
 
         <Txt w="black" size={13} color={C.muted} style={s.section}>
-          {t('regionsOffline').toUpperCase()}
+          {upper(t('regionsOffline'))}
         </Txt>
 
         {data.manifestError && !data.manifest ? (
@@ -214,7 +221,7 @@ export default function ProfileScreen() {
         {installed.length > 0 ? (
           <View style={s.card}>
             <Txt w="black" size={13} color={C.muted} style={s.cardLabel}>
-              {t('inPhone')}
+              {upper(t('inPhone'))}
             </Txt>
             {installed.map((i) => (
               <View key={i.region}>
@@ -249,7 +256,7 @@ export default function ProfileScreen() {
         {data.manifest ? (
           <View style={s.card}>
             <Txt w="black" size={13} color={C.muted} style={s.cardLabel}>
-              {t('available')}
+              {upper(t('available'))}
             </Txt>
             <RegionList
               right={(p) =>
@@ -282,7 +289,7 @@ const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: C.bg },
   body: { padding: 16, gap: 10, paddingBottom: 40 },
   card: { backgroundColor: '#FFFFFF', borderRadius: 18, overflow: 'hidden', ...shadow },
-  cardLabel: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, textTransform: 'uppercase', letterSpacing: 0.6 },
+  cardLabel: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4, letterSpacing: 0.6 },
   section: { paddingHorizontal: 8, marginTop: 8, letterSpacing: 0.8 },
   menuRow: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56, paddingHorizontal: 16 },
   menuLine: { borderTopWidth: 1, borderTopColor: C.lineSoft },

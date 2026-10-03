@@ -17,7 +17,7 @@ import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { preloadPlaces, searchPlaces, type PlaceHit } from '@/data/places';
 import { searchStations, type Station } from '@/data/queries';
-import { t, useLang, type Key } from '@/i18n';
+import { t, upper, useLang, type Key } from '@/i18n';
 import type { LatLon } from '@/lib/geo';
 import { looksLikeLinkOrCoords, resolveSharedText } from '@/lib/mapsLink';
 import { currentPosition } from '@/lib/position';
@@ -253,7 +253,7 @@ export default function PlaceSearch() {
         {places && places.length ? (
           <>
             <Txt w="black" size={12} color={C.muted} style={s.kicker}>
-              {t('planPlaces').toUpperCase()}
+              {upper(t('planPlaces'))}
             </Txt>
             <View style={s.card}>
               {places.map((p, i) => (
@@ -265,7 +265,7 @@ export default function PlaceSearch() {
         {list && list.length ? (
           <>
             <Txt w="black" size={12} color={C.muted} style={s.kicker}>
-              {t('planStops').toUpperCase()}
+              {upper(t('planStops'))}
             </Txt>
             <View style={s.card}>
               {list.map((h, i) => {
@@ -297,7 +297,7 @@ export default function PlaceSearch() {
         {!list && !linkMode && recent.length ? (
           <>
             <Txt w="black" size={12} color={C.muted} style={s.kicker}>
-              {t('planRecent').toUpperCase()}
+              {upper(t('planRecent'))}
             </Txt>
             <View style={s.card}>
               {recent.map((p, i) => (

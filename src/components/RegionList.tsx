@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { C } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import type { PackageInfo } from '@/data/packages';
-import { getLang, t } from '@/i18n';
+import { decimal, getLang, t } from '@/i18n';
 import { formatDate } from '@/lib/time';
 
 import { Icon } from './Icon';
@@ -13,7 +13,7 @@ import { Txt } from './ui';
 
 /** Rozmiar paczki: „89 KB”, „1,4 MB”. */
 export const fileSize = (bytes: number) =>
-  bytes < 1e6 ? `${Math.max(1, Math.round(bytes / 1e3))} KB` : `${(bytes / 1e6).toFixed(1).replace('.', ',')} MB`;
+  bytes < 1e6 ? `${Math.max(1, Math.round(bytes / 1e3))} KB` : `${decimal((bytes / 1e6).toFixed(1))} MB`;
 
 export function RegionList({
   right,

@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C } from '@/constants/theme';
 import type { PlaceCat, PlaceHit } from '@/data/places';
-import { getLang, t, type Key } from '@/i18n';
+import { decimal, getLang, t, type Key } from '@/i18n';
 
 import { Icon, type IconName } from './Icon';
 import { Txt } from './ui';
@@ -18,7 +18,7 @@ export function placeTitle(p: Pick<PlaceHit, 'name' | 'latin'>): { main: string;
   return { main: p.latin, sub: p.name };
 }
 
-const distText = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${(m / 1000).toFixed(m < 10_000 ? 1 : 0).replace('.', getLang() === 'pl' ? ',' : '.')} km`);
+const distText = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} m` : `${decimal((m / 1000).toFixed(m < 10_000 ? 1 : 0))} km`);
 
 export function PlaceRow({ place, region, first, onPress }: { place: PlaceHit; region: string; first?: boolean; onPress: () => void }) {
   const title = placeTitle(place);

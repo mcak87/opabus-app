@@ -7,7 +7,7 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
-import { t, useLang, type Key } from '@/i18n';
+import { t, upper, useLang, type Key } from '@/i18n';
 import { useSettings } from '@/lib/settings';
 import { openSite, PARTNERS_EMAIL, sitePage } from '@/lib/site';
 
@@ -107,7 +107,7 @@ function PartnerCard({
       </View>
       <View style={{ flex: 1, gap: 2 }}>
         <Txt w="black" size={12} color={kickerColor} style={s.kicker}>
-          {t(kicker)}
+          {upper(t(kicker))}
         </Txt>
         <Txt w="black" size={16} color={C.ink}>
           {t(title)}
@@ -127,7 +127,7 @@ const s = StyleSheet.create({
   intro: { paddingHorizontal: 8, paddingBottom: 6, lineHeight: 21 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 16, ...shadow },
   cardIcon: { width: 48, height: 48, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  kicker: { textTransform: 'uppercase', letterSpacing: 0.6 },
+  kicker: { letterSpacing: 0.6 },
   contact: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.sky, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, marginTop: 6 },
   write: { height: 44, paddingHorizontal: 16, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   note: { textAlign: 'center', marginTop: 4 },

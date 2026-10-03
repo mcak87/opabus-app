@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { C, shadow } from '@/constants/theme';
-import { t } from '@/i18n';
+import { t, upper } from '@/i18n';
 
 import { Icon } from './Icon';
 import { PanoramaHeader, Txt } from './ui';
@@ -27,7 +27,7 @@ export function ScreenHeader({ region, kicker, title, sub, right }: { region?: s
       <View style={s.texts}>
         {kicker ? (
           <Txt w="extrabold" size={13} color={C.blue} style={s.kicker}>
-            {kicker}
+            {upper(kicker)}
           </Txt>
         ) : null}
         <Txt w="black" size={27} color={C.ink} numberOfLines={2}>
@@ -47,5 +47,5 @@ const s = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16 },
   round: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...shadow },
   texts: { paddingHorizontal: 24, paddingTop: 12, gap: 2 },
-  kicker: { textTransform: 'uppercase', letterSpacing: 0.6 },
+  kicker: { letterSpacing: 0.6 },
 });
