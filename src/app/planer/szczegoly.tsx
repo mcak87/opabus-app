@@ -10,14 +10,14 @@ import { stopName } from '@/components/TripOption';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, lineColor, shadow } from '@/constants/theme';
 import { modeOf } from '@/data/queries';
-import { getLang, t, useLang } from '@/i18n';
+import { getLang, pluralKey, t, useLang } from '@/i18n';
 import { athensEpoch, hhmm, type ServiceDay } from '@/lib/time';
 import { tripPrices, type Price } from '@/planner/fares';
-import { duration, placeName, priceText } from '@/planner/format';
+import { duration, hhmmDay, patternLabel, placeName, priceText } from '@/planner/format';
 import type { Net, RideLeg, WalkLeg } from '@/planner/raptor';
 import { usePlanner } from '@/planner/store';
 
-const time = (sec: number, est: boolean) => (est ? t('approx', { time: hhmm(sec) }) : hhmm(sec));
+const time = (sec: number, est: boolean) => (est ? t('approx', { time: hhmmDay(sec) }) : hhmmDay(sec));
 
 export default function TripDetails() {
   useLang();
@@ -40,14 +40,15 @@ export default function TripDetails() {
   const rideLegs = o.legs.filter((l): l is RideLeg => l.kind === 'ride');
   const prices = trip.fares ? tripPrices(trip.fares, net, rideLegs) : null;
   const ops = new Set((prices?.rides ?? []).map((p) => p.op).filter(Boolean));
-  const fareLabel = trip.fares?.operators.KTEL?.label?.[getLang()] ?? trip.fares?.operators.KTEL?.label?.en;
+  const ktel = Object.values(trip.fares ?? {}).find((f) => f.operators.KTEL?.label)?.operators.KTEL?.label;
+  const fareLabel = ktel?.[getLang()] ?? ktel?.en;
 
   return (
     <View style={s.screen}>
       <ScreenHeader
         region={trip.region}
         kicker={t('tripDetails')}
-        title={`${hhmm(o.leave)} – ${hhmm(o.arrive)}`}
+        title={`${hhmm(o.leave)} – ${hhmmDay(o.arrive)}`}
         sub={`${placeName(trip.from)} → ${placeName(trip.to)} · ${duration(o.arrive - o.leave)}`}
       />
       <ScrollView contentContainerStyle={s.body}>
@@ -62,7 +63,7 @@ export default function TripDetails() {
               <RideRows key={k} net={net} leg={l} price={prices?.rides[rideLegs.indexOf(l)]} />
             ),
           )}
-          <Point time={hhmm(o.arrive)} title={placeName(trip.to)} kicker={t('destination')} color={C.orange} last />
+          <Point time={hhmmDay(o.arrive)} title={placeName(trip.to)} kicker={t('destination')} color={C.orange} last />
         </View>
 
         {prices ? (
@@ -97,7 +98,7 @@ export default function TripDetails() {
         ) : null}
 
         {/* Przypomnienie 5 min przed wyjściem (projekt: canvas „Szczegóły trasy” – „Przypomnij 10:13”). */}
-        {rideLegs[0] ? <TripReminder region={trip.region} net={net} leave={o.leave} day={trip.result.day} ride={rideLegs[0]} firstWalk={o.legs[0]?.kind === 'walk' ? o.legs[0].sec : 0} /> : null}
+        {rideLegs[0] ? <TripReminder net={net} leave={o.leave} day={trip.result.day} ride={rideLegs[0]} firstWalk={o.legs[0]?.kind === 'walk' ? o.legs[0].sec : 0} /> : null}
       </ScrollView>
     </View>
   );
@@ -107,10 +108,11 @@ const mins = (l: WalkLeg) => Math.max(1, Math.round(l.sec / 60));
 
 const LEAVE_BEFORE = 5 * 60;
 
-function TripReminder({ region, net, leave, day, ride, firstWalk }: { region: string; net: Net; leave: number; day: ServiceDay; ride: RideLeg; firstWalk: number }) {
-  const r = net.routes.get(net.patterns[ride.pattern].route);
-  const line = r?.shortName || r?.longName || '';
+function TripReminder({ net, leave, day, ride, firstWalk }: { net: Net; leave: number; day: ServiceDay; ride: RideLeg; firstWalk: number }) {
+  const line = patternLabel(net, ride.pattern);
   const stop = stopName(net, ride.board);
+  // Region i stacja z paczki, z której jest przystanek (sieć może łączyć kilka paczek).
+  const { region, stationId } = net.stops[ride.board];
   const dep = time(ride.dep, ride.depEst);
   const walk = firstWalk >= 60;
   // Pełna minuta (wyjście liczone z dojściem ma sekundy).
@@ -127,7 +129,7 @@ function TripReminder({ region, net, leave, day, ride, firstWalk }: { region: st
             ? t('remindLeaveBody', { line, time: dep, stop, walk: Math.round(firstWalk / 60) })
             : t('remindDepBody', { stop, headsign: net.patterns[ride.pattern].headsign })
         }
-        url={`/stop/${region}/${net.stops[ride.board].station}`}
+        url={`/stop/${region}/${stationId}`}
       />
     </View>
   );
@@ -200,19 +202,27 @@ function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }
             {stopName(net, leg.board)}
           </Txt>
           <View style={s.lineRow}>
-            <LineBadge label={r?.shortName || r?.longName || '?'} color={r?.color ?? null} agencyCode={r?.agencyCode ?? ''} mode={mode} />
+            <LineBadge label={patternLabel(net, leg.pattern)} color={r?.color ?? null} agencyCode={r?.agencyCode ?? ''} mode={mode} />
             <Txt w="bold" size={13} color={C.text2} style={{ flex: 1 }} numberOfLines={2}>
               {[t('towards', { headsign: pat.headsign }), r?.agencyName || r?.agencyCode].filter(Boolean).join(' · ')}
             </Txt>
           </View>
+          {pat.boardSec ? (
+            <View style={s.boardRow}>
+              <Icon name="clock" size={15} color={C.orangeText} />
+              <Txt w="bold" size={13} color={C.orangeText} style={{ flex: 1 }}>
+                {t('ferryBoard', { min: Math.round(pat.boardSec / 60) })}
+              </Txt>
+            </View>
+          ) : null}
           {price ? (
             <Txt w="extrabold" size={13} color={C.text2}>
-              {`${t('fareTicket', { op: price.op || r?.agencyCode || '' })} · ${priceText(price)}`}
+              {`${t('fareTicket', { op: price.op || r?.agencyName || r?.agencyCode || '' })} · ${priceText(price)}`}
             </Txt>
           ) : null}
           <Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((x) => !x)} hitSlop={6} style={s.stopsBtn}>
             <Txt w="bold" size={13} color={C.muted}>
-              {t('stopsRide', { n: stops, min: Math.max(1, Math.round((leg.arr - leg.dep) / 60)) })}
+              {t(pluralKey('stopsRide', stops), { n: stops, min: Math.max(1, Math.round((leg.arr - leg.dep) / 60)) })}
               {middle.length ? ' · ' : ''}
             </Txt>
             {middle.length ? (
@@ -271,4 +281,5 @@ const s = StyleSheet.create({
   fareTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   fareLine: { lineHeight: 18 },
   midRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 2 },
+  boardRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

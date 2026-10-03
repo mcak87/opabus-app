@@ -14,6 +14,7 @@ import { distanceM, walkMinutes, type LatLon } from '@/lib/geo';
 import { cancelReminder, getReminder, setReminder } from '@/lib/reminders';
 import { useSettings } from '@/lib/settings';
 import { athensEpoch, athensNow, hhmm } from '@/lib/time';
+import { patternLabel } from '@/planner/format';
 import type { Journey, Net, RideLeg } from '@/planner/raptor';
 import { lastReturn } from '@/planner/service';
 import { setFrom, setTo, setWhen, type Place } from '@/planner/store';
@@ -42,10 +43,9 @@ async function syncLastBusReminder(net: Net, j: Journey | null) {
   if (!j || !ride) return cancelReminder('lastBus');
   const at = athensEpoch(athensNow(), ride.dep - LAST_BUS_BEFORE);
   if (getReminder('lastBus')?.at === at) return;
-  const route = net.routes.get(net.patterns[ride.pattern].route);
   const walk = j.legs[0]?.kind === 'walk' && j.legs[0].sec >= 60 ? Math.round(j.legs[0].sec / 60) : 0;
   const body =
-    t('remindLastBody', { time: hhmm(ride.dep), line: route?.shortName || route?.longName || '', stop: stopName(net, ride.board) }) +
+    t('remindLastBody', { time: hhmm(ride.dep), line: patternLabel(net, ride.pattern), stop: stopName(net, ride.board) }) +
     (walk ? t('remindWalkSuffix', { min: walk }) : '');
   const r = await setReminder('lastBus', at, { title: t('remindLastTitle', { min: LAST_BUS_BEFORE / 60 }), body, url: '/' });
   if (r !== 'ok') await cancelReminder('lastBus');
@@ -84,7 +84,7 @@ export function LodgingReturn({
   useEffect(() => {
     if (!active || !lodging) return;
     let alive = true;
-    lastReturn(region, { lat, lon }, lodging)
+    lastReturn([region], { lat, lon }, lodging)
       .then((r) => {
         if (!alive) return;
         setRes({ key, ...r });
@@ -146,7 +146,7 @@ export function LodgingReturn({
   const ride = j.legs.find((l): l is RideLeg => l.kind === 'ride');
   if (!ride) return null;
   const route = net.routes.get(net.patterns[ride.pattern].route);
-  const fromHere = fromStation !== undefined && net.stops[ride.board].station === fromStation;
+  const fromHere = fromStation !== undefined && net.stops[ride.board].region === region && net.stops[ride.board].stationId === fromStation;
   const firstWalk = j.legs[0]?.kind === 'walk' ? j.legs[0].sec : 0;
   const where = fromHere
     ? t('returnFromHere', { time: hhmm(j.arrive) })
@@ -167,7 +167,7 @@ export function LodgingReturn({
           <Txt w="black" size={28} color={C.orangeDeep}>
             {ride.depEst ? t('approx', { time: hhmm(ride.dep) }) : hhmm(ride.dep)}
           </Txt>
-          <LineBadge label={route?.shortName || route?.longName || '?'} color={route?.color ?? null} agencyCode={route?.agencyCode ?? ''} mode={modeOf(route?.type ?? 3)} />
+          <LineBadge label={patternLabel(net, ride.pattern)} color={route?.color ?? null} agencyCode={route?.agencyCode ?? ''} mode={modeOf(route?.type ?? 3)} />
         </View>
         <Txt w="bold" size={13} color={C.orangeDeep} style={{ lineHeight: 18 }}>
           {[where, j.rides > 1 ? t('returnWithChange') : null].filter(Boolean).join(' · ')}

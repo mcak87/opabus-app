@@ -2,7 +2,7 @@
 import Storage from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 
-import type { FareFile } from './fares';
+import type { FareFiles } from './fares';
 import type { PlanResult } from './plan';
 import type { Net } from './raptor';
 
@@ -14,6 +14,7 @@ export type Place =
 export type When = 'now' | 'later' | 'tomorrow';
 
 export type PlannedTrip = {
+  /** Region startu (nagłówek); paczki w sieci – `net.regions`. */
   region: string;
   net: Net;
   from: Place;
@@ -23,8 +24,8 @@ export type PlannedTrip = {
   result: PlanResult;
   /** Godzina, od której szukaliśmy (sekundy dnia wyniku). */
   at: number;
-  /** Cennik regionu (null = brak cennika – bez cen). */
-  fares: FareFile | null;
+  /** Cenniki regionów z sieci (null = żaden nie ma cennika – bez cen). */
+  fares: FareFiles | null;
 };
 
 type State = { from: Place; to: Place | null; when: When; time: number; trip: PlannedTrip | null; recent: Place[] };

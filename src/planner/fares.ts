@@ -13,15 +13,20 @@ export type FareFile = {
   routes: Record<string, { op: string; flat?: FarePoint; town?: string[]; stops?: Record<string, FarePoint> }>;
 };
 
-export type Price = { kind: 'exact' | 'upTo' | 'approx' | 'unknown'; min: number; max: number; op: string };
+/** `operator` przy nieznanej cenie: prom albo pociąg – bilet u przewoźnika, nie u kierowcy. */
+export type Price = { kind: 'exact' | 'upTo' | 'approx' | 'unknown'; min: number; max: number; op: string; operator?: boolean };
+/** Cenniki pobranych regionów (klucz = region paczki). */
+export type FareFiles = Record<string, FareFile>;
 
-const UNKNOWN = (op = ''): Price => ({ kind: 'unknown', min: 0, max: 0, op });
+const UNKNOWN = (op = '', operator = false): Price => ({ kind: 'unknown', min: 0, max: 0, op, ...(operator ? { operator } : {}) });
 const valueOf = (x: FarePoint) => x.p ?? x.max ?? 0;
 
-export function ridePrice(file: FareFile, net: Net, leg: RideLeg): Price {
-  const route = net.routes.get(net.patterns[leg.pattern].route);
-  const r = route ? file.routes[route.code] : undefined;
-  if (!r) return UNKNOWN();
+export function ridePrice(files: FareFiles, net: Net, leg: RideLeg): Price {
+  const pat = net.patterns[leg.pattern];
+  const route = net.routes.get(pat.route);
+  const file = files[net.regions[pat.part]];
+  const r = route && file ? file.routes[route.code] : undefined;
+  if (!r) return UNKNOWN('', route?.type === 4 || route?.type === 2);
   const approx = !file.operators[r.op]?.confirmed;
   const make = (x: FarePoint | undefined, exact: boolean): Price => {
     if (!x || x.none || (x.p == null && x.min == null)) return UNKNOWN(r.op);
@@ -45,7 +50,7 @@ export function ridePrice(file: FareFile, net: Net, leg: RideLeg): Price {
 
 /** Cena całej podróży: suma przejazdów; najmniej pewny składnik decyduje o rodzaju. */
 export function journeyPrice(prices: Price[]): Price {
-  if (!prices.length || prices.some((p) => p.kind === 'unknown')) return UNKNOWN();
+  if (!prices.length || prices.some((p) => p.kind === 'unknown')) return UNKNOWN('', prices.some((p) => p.operator));
   const kind = prices.some((p) => p.kind === 'approx') ? 'approx' : prices.some((p) => p.kind === 'upTo') ? 'upTo' : 'exact';
   return {
     kind,
@@ -55,7 +60,7 @@ export function journeyPrice(prices: Price[]): Price {
   };
 }
 
-export function tripPrices(file: FareFile, net: Net, legs: RideLeg[]): { rides: Price[]; total: Price } {
-  const rides = legs.map((l) => ridePrice(file, net, l));
+export function tripPrices(files: FareFiles, net: Net, legs: RideLeg[]): { rides: Price[]; total: Price } {
+  const rides = legs.map((l) => ridePrice(files, net, l));
   return { rides, total: journeyPrice(rides) };
 }

@@ -28,6 +28,16 @@ export function modeOf(routeType: number): Mode {
   }
 }
 
+/**
+ * Napis na plakietce linii: numer linii, a prom bez numeru – armator („Blue Star Ferries”, „Sebeco Lines”),
+ * bo nazwa trasy („Πειραιάς – Ρόδος”) jest za długa, a kierunek i tak stoi obok.
+ */
+export function lineLabel(shortName: string, longName: string, type: number, agencyName: string): string {
+  if (shortName) return shortName;
+  if (type === 4 && agencyName) return agencyName.replace(/\s*\(.*\)\s*$/, '');
+  return longName;
+}
+
 export type RegionMeta = { region: string; validFrom: number; validTo: number; generated: string };
 
 export async function loadMeta(db: Db): Promise<RegionMeta> {
@@ -244,7 +254,7 @@ function toDeparture(r: DepRow, shift: number, dayOffset: 0 | -1): Departure {
     stopId: r.stop_id,
     headsign: r.headsign,
     routeId: r.route_id,
-    shortName: r.short_name || r.long_name,
+    shortName: lineLabel(r.short_name, r.long_name, r.type, r.agency ?? ''),
     longName: r.long_name,
     mode: modeOf(r.type),
     color: r.color ? `#${r.color.replace('#', '')}` : null,

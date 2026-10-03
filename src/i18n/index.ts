@@ -57,6 +57,14 @@ export function t(key: Key, vars?: Record<string, string | number>): string {
   return s;
 }
 
+/** Klucz z odmianą przez liczbę: `base_one` (1), `base_few` (pl, uk: 2–4, 22–24…), `base` (pozostałe). */
+export function pluralKey(base: Key, n: number): Key {
+  const slavic = current === 'pl' || current === 'uk';
+  const few = slavic && n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14);
+  const k = `${base}${n === 1 ? '_one' : few ? '_few' : ''}`;
+  return k in pl ? (k as Key) : base;
+}
+
 /** Hook: ponowne renderowanie po zmianie języka. */
 export function useLang(): Lang {
   return useSyncExternalStore(

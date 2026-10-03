@@ -43,6 +43,8 @@ export default function PlaceSearch() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Key | null>(null);
   const regions = Object.keys(data.installed).filter((r) => !OVERLAY_REGIONS.has(r));
+  // Przystanki szukamy też w paczkach promów i kolei (porty, stacje) – miejsca (hotele, ulice) są tylko w regionach.
+  const stopRegions = [...regions, ...[...OVERLAY_REGIONS].filter((r) => data.installed[r])];
   const linkMode = looksLikeLinkOrCoords(q);
 
   // Bliższe miejsca wyżej w wynikach – wystarczy ostatnia znana pozycja (bez czekania na GPS).
@@ -65,7 +67,7 @@ export default function PlaceSearch() {
         return;
       }
       const out: Hit[] = [];
-      for (const region of regions) {
+      for (const region of stopRegions) {
         const { db } = await openRegion(region);
         out.push(...(await searchStations(db, q, 25)).map((s) => ({ ...s, region })));
       }
@@ -79,7 +81,7 @@ export default function PlaceSearch() {
       clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [q, regions.join(','), near]);
+  }, [q, stopRegions.join(','), near]);
 
   const packages = data.manifest?.packages ?? [];
 
@@ -275,7 +277,7 @@ export default function PlaceSearch() {
                     onPress={() => choose({ kind: 'station', region: h.region, id: h.id, name: h.name, name_en: h.name_en, lat: h.lat, lon: h.lon })}
                     style={[s.row, i > 0 && s.rowLine]}>
                     <View style={s.stopIcon}>
-                      <Icon name="bus" size={18} color="#FFFFFF" stroke={2.2} />
+                      <Icon name={h.region === 'promy' ? 'ferry' : h.region === 'kolej' ? 'rail' : 'bus'} size={18} color="#FFFFFF" stroke={2.2} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Txt w="extrabold" size={16} color={C.ink} numberOfLines={1}>

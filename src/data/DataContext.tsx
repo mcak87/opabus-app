@@ -1,4 +1,5 @@
 // Stan danych w aplikacji: manifest paczek, lista regionów, zainstalowane paczki.
+import Storage from 'expo-sqlite/kv-store';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 
 import { getLang } from '@/i18n';
@@ -25,6 +26,27 @@ import {
 
 /** Paczki obejmujące całą Grecję – dokładamy je do regionu, a nie wybieramy jako region. */
 export const OVERLAY_REGIONS = new Set(['kolej', 'promy']);
+
+/**
+ * Promy i kolej (razem ok. 100 KB) pobieramy same, gdy w telefonie jest już jakiś region – planer łączy je z autobusami
+ * (Faliraki → Symi, Ateny → Egina). Tylko raz: kto usunie je potem w Profilu, ten ich z powrotem nie dostanie.
+ */
+const K_OVERLAYS_AUTO = 'data.overlaysAuto.v1';
+let overlaysJob: Promise<boolean> | null = null;
+function autoInstallOverlays(m: Manifest): Promise<boolean> {
+  // Jedno pobieranie naraz (start aplikacji i instalacja regionu mogą wywołać to równocześnie).
+  overlaysJob ??= (async () => {
+    if (Storage.getItemSync(K_OVERLAYS_AUTO)) return false;
+    const all = listInstalled();
+    if (!Object.keys(all).some((r) => !OVERLAY_REGIONS.has(r))) return false;
+    for (const pkg of m.packages.filter((p) => OVERLAY_REGIONS.has(p.region) && !all[p.region])) await installPackage(pkg, m.schema);
+    Storage.setItemSync(K_OVERLAYS_AUTO, '1');
+    return true;
+  })().finally(() => {
+    overlaysJob = null;
+  });
+  return overlaysJob;
+}
 
 type DataState = {
   manifest: Manifest | null;
@@ -67,6 +89,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         // Cenniki i miejsca (hotele, plaże, ulice…) pobranych regionów – małe pliki, odświeżane przy każdym połączeniu.
         Object.keys(listInstalled()).forEach((r) => fetchFares(r).catch(() => {}));
         syncPlaces(Object.keys(listInstalled())).catch(() => {});
+        autoInstallOverlays(m)
+          .then((added) => added && alive && setInstalled(listInstalled()))
+          .catch(() => {});
       })
       .catch(() => alive && setManifestError(true));
     return () => {
@@ -89,6 +114,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const home = getSettings().homeRegion;
         if (!OVERLAY_REGIONS.has(region) && (!home || !all[home])) setHomeRegion(region);
         if (opts?.withMap && !OVERLAY_REGIONS.has(region)) downloadMap(region, pkg.bbox).catch(() => {});
+        autoInstallOverlays(manifest)
+          .then((added) => added && setInstalled(listInstalled()))
+          .catch(() => {});
       } finally {
         setBusy((b) => ({ ...b, [region]: false }));
       }

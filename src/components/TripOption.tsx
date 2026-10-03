@@ -6,7 +6,7 @@ import { C, shadow } from '@/constants/theme';
 import { modeOf } from '@/data/queries';
 import { t, type Key } from '@/i18n';
 import { hhmm } from '@/lib/time';
-import { duration, modeName } from '@/planner/format';
+import { duration, hhmmDay, modeName, patternLabel } from '@/planner/format';
 import type { Label, Option } from '@/planner/plan';
 import type { Net, RideLeg } from '@/planner/raptor';
 
@@ -65,7 +65,7 @@ export function TripOption({
         </Txt>
       </View>
       <Txt w="black" size={24} color={C.ink}>
-        {hhmm(o.leave)} – {hhmm(o.arrive)}
+        {hhmm(o.leave)} – {hhmmDay(o.arrive)}
       </Txt>
       <View style={s.chainRow}>
         <View style={s.chain}>
@@ -81,9 +81,8 @@ export function TripOption({
                 </View>
               ) : (
                 (() => {
-                  const pat = net.patterns[l.pattern];
-                  const r = net.routes.get(pat.route);
-                  return <LineBadge label={r?.shortName || r?.longName || '?'} color={r?.color ?? null} agencyCode={r?.agencyCode ?? ''} mode={modeOf(r?.type ?? 3)} />;
+                  const r = net.routes.get(net.patterns[l.pattern].route);
+                  return <LineBadge label={patternLabel(net, l.pattern)} color={r?.color ?? null} agencyCode={r?.agencyCode ?? ''} mode={modeOf(r?.type ?? 3)} />;
                 })()
               );
             return (
