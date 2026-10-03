@@ -15,8 +15,8 @@ const TRANSFER_RADIUS_M = 400;
 const CROSS_RADIUS_M = 1000;
 /** Minimalny czas na przesiadkę na tym samym przystanku. */
 const MIN_CHANGE_SEC = 60;
-/** Na prom trzeba być wcześniej (bilety, wejście na pokład). */
-export const FERRY_BOARD_SEC = 20 * 60;
+/** Na prom trzeba być wcześniej (bilety, wejście na pokład) – 30 min, decyzja Michała 03.10.2026. */
+export const FERRY_BOARD_SEC = 30 * 60;
 /** Zapas po przypłynięciu promu / przyjeździe pociągu, zanim zdążymy na kolejny przejazd (spóźnienia). */
 const FERRY_AFTER_SEC = 10 * 60;
 const RAIL_AFTER_SEC = 5 * 60;
