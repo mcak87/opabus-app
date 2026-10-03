@@ -18,8 +18,9 @@
     "android": {
       "package": "com.opabus.app",
       "adaptiveIcon": {
-        "backgroundColor": "#1E4FD8",
-        "foregroundImage": "./assets/images/opabus-icon-1024.png"
+        "backgroundColor": "#0547DF",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
       "intentFilters": [
@@ -66,7 +67,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#1E4FD8",
-          "image": "./assets/images/opabus-icon-1024.png",
+          "image": "./assets/images/splash-icon.png",
           "imageWidth": 160
         }
       ],
