@@ -44,6 +44,7 @@ example
 
 # Lokalne ustawienia serwera danych do testów (npm run dane)
 scripts/dev-app-config.json
+scripts/dev-photos/
 
 # Pliki kompilacji lokalnych modułów natywnych
 modules/*/android/build/

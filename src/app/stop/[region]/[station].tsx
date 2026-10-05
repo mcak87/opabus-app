@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { Icon } from '@/components/Icon';
 import { LodgingReturn } from '@/components/LodgingReturn';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { AddPhotoLink, StopPhotos } from '@/components/StopPhotos';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { minutesTo, stationNames } from '@/data/nearby';
@@ -29,6 +30,8 @@ export default function StopScreen() {
   const [span, setSpan] = useState(STEP);
   const [error, setError] = useState(false);
   const [approx, setApprox] = useState(false);
+  /** Kody słupków z GTFS – zdjęcia przystanku są przypięte także do nich (numery stacji w paczkach się zmieniają). */
+  const [codes, setCodes] = useState<string[]>([]);
   const { favorites, lodging } = useSettings();
 
   const load = useCallback(async () => {
@@ -39,7 +42,9 @@ export default function StopScreen() {
       setNow(n);
       setMeta(m);
       setSt(await stationById(db, id));
-      setApprox((await stationStops(db, id)).some((x) => x.verify));
+      const posts = await stationStops(db, id);
+      setApprox(posts.some((x) => x.verify));
+      setCodes(posts.map((x) => x.code).filter(Boolean));
       const list = await stationDepartures(db, cal, id, n, n.sec - 60, n.sec + span);
       setDeps(list.filter((d) => d.dep >= n.sec - 30));
       setLast((await lastDeparturesToday(db, cal, id, n)).filter((d) => d.dep >= n.sec - 30));
@@ -82,6 +87,9 @@ export default function StopScreen() {
             {expired ? t('timetableExpired', { date: formatDate(meta.validTo) }) : t('timetableValid', { date: formatDate(meta.validTo) })}
           </Txt>
         ) : null}
+
+        {/* Zdjęcia przystanku od użytkowników – pomagają go znaleźć (decyzja Michała 05.10.2026). */}
+        <StopPhotos region={region} station={Number(station)} stopCodes={codes} />
 
         {st ? (
           <LodgingReturn
@@ -163,6 +171,7 @@ export default function StopScreen() {
             </View>
           </View>
         ) : null}
+        {st ? <AddPhotoLink region={region} station={st.id} stopCodes={codes} /> : null}
         {st ? (
           approx ? (
             <Pressable accessibilityRole="button" onPress={openFix} style={s.fixCard}>

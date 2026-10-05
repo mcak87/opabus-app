@@ -141,6 +141,13 @@ const ICONS = {
       <Circle cx="12" cy="13" r="3.5" />
     </>
   ),
+  image: (
+    <>
+      <Rect x="3" y="4" width="18" height="16" rx="2.5" />
+      <Circle cx="9" cy="9.5" r="1.8" />
+      {P('m21 16-5.5-5.5L5 20')}
+    </>
+  ),
   mail: (
     <>
       <Rect x="3" y="5" width="18" height="14" rx="2" />

@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Icon } from '@/components/Icon';
 import { ReminderButton } from '@/components/ReminderButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { StopPhotoThumb } from '@/components/StopPhotos';
 import { stopName } from '@/components/TripOption';
 import { LineBadge, Txt } from '@/components/ui';
 import { C, lineColor, shadow } from '@/constants/theme';
@@ -201,6 +202,13 @@ function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }
           <Txt w="extrabold" size={16} color={C.ink} numberOfLines={2}>
             {stopName(net, leg.board)}
           </Txt>
+          {/* Zdjęcie przystanku wsiadania (od użytkowników) – dotknięcie otwiera przystanek. */}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push({ pathname: '/stop/[region]/[station]', params: { region: net.stops[leg.board].region, station: String(net.stops[leg.board].stationId) } })}
+            style={{ alignSelf: 'flex-start' }}>
+            <StopPhotoThumb region={net.stops[leg.board].region} station={net.stops[leg.board].stationId} size={72} />
+          </Pressable>
           <View style={s.lineRow}>
             <LineBadge label={patternLabel(net, leg.pattern)} color={r?.color ?? null} agencyCode={r?.agencyCode ?? ''} mode={mode} />
             <Txt w="bold" size={13} color={C.text2} style={{ flex: 1 }} numberOfLines={2}>

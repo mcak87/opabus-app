@@ -2,7 +2,8 @@
 // https://opabus.com/data/v1/ (paczki offline, lista regionów, ustawienia). Bez zależności – tylko Node 24.
 //   npm run dane            → folder domyślny (strona-opabus w projekcie OpaBus)
 //   npm run dane -- <folder strona-opabus>
-import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { Buffer } from 'node:buffer';
+import { createReadStream, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { networkInterfaces } from 'node:os';
 import { extname, join, normalize, resolve } from 'node:path';
@@ -57,8 +58,46 @@ const DYNAMIC = {
 
 const log = (...a) => console.log(new Date().toLocaleTimeString(), ...a);
 
+// Zdjęcia przystanków na czas testów: zapis w scripts/dev-photos (poza gitem). Tu od razu „zatwierdzone”,
+// żeby w aplikacji było widać wyświetlanie – na stronie zdjęcie czeka na zatwierdzenie w /admin/zdjecia.
+const PHOTOS = join(import.meta.dirname, 'dev-photos');
+function devPhotos(region) {
+  if (!existsSync(PHOTOS)) return [];
+  return readdirSync(PHOTOS)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => JSON.parse(readFileSync(join(PHOTOS, f), 'utf8')))
+    .filter((p) => p.region === region)
+    .map(({ id, station, stops, w, h, caption, created }) => ({ id, station, stops, w, h, caption, created }));
+}
+
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
+
+  if (req.method === 'POST' && url.pathname === '/api/stop-photo') {
+    let body = '';
+    for await (const chunk of req) body += chunk;
+    const b = JSON.parse(body);
+    const id = Math.random().toString(36).slice(2, 14).padEnd(12, 'x');
+    mkdirSync(PHOTOS, { recursive: true });
+    writeFileSync(join(PHOTOS, `${id}.jpg`), Buffer.from(b.image, 'base64'));
+    const { image, ...meta } = b;
+    writeFileSync(join(PHOTOS, `${id}.json`), JSON.stringify({ ...meta, id, created: new Date().toISOString(), status: 'approved' }));
+    log('POST', url.pathname, JSON.stringify({ ...meta, image: `${Math.round(image.length * 0.75 / 1000)} KB` }));
+    res.writeHead(201, { 'Content-Type': TYPES['.json'] }).end(JSON.stringify({ id, status: 'new' }));
+    return;
+  }
+  if (url.pathname === '/api/stop-photos') {
+    res.writeHead(200, { 'Content-Type': TYPES['.json'] }).end(JSON.stringify({ version: 1, photos: devPhotos(url.searchParams.get('region')) }));
+    log('GET', url.pathname + url.search);
+    return;
+  }
+  if (url.pathname.startsWith('/api/stop-photo-img/')) {
+    const f = join(PHOTOS, `${url.pathname.split('/').pop().replace(/[^a-z0-9]/g, '')}.jpg`);
+    if (!existsSync(f)) return void res.writeHead(404).end();
+    res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+    createReadStream(f).pipe(res);
+    return;
+  }
 
   if (req.method === 'POST' && url.pathname.startsWith('/api/')) {
     let body = '';

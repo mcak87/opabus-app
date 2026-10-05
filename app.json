@@ -77,6 +77,14 @@
           "locationWhenInUsePermission": "OpaBus uses your location to show the nearest bus stops and departures. Your location stays on your phone."
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "OpaBus uses the camera only when you add a photo of a bus stop to help other travellers find it.",
+          "photosPermission": "OpaBus opens your photos only when you choose a photo of a bus stop to add.",
+          "microphonePermission": false
+        }
+      ],
       "expo-sqlite",
       "expo-localization",
       "expo-font",
