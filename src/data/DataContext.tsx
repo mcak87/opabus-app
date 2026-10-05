@@ -8,6 +8,7 @@ import { getSettings, setHomeRegion } from '@/lib/settings';
 
 import { refreshAppConfig } from './appConfig';
 import { refreshNews } from './news';
+import { flushReports } from './punctuality';
 import { fetchFares, removeFares } from './fares';
 import { removePlaces, syncPlaces } from './places';
 import { deleteMap, downloadMap, loadMapPacks } from './offlineMaps';
@@ -82,6 +83,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     // Ustawienia ze strony (komunikat, minimalna wersja) i „Co nowego” – bez internetu zostaje ostatnia zapisana wersja.
     refreshAppConfig().catch(() => {});
     refreshNews().catch(() => {});
+    // Zgłoszenia „czy autobus był o czasie”, które nie wyszły bez internetu.
+    flushReports().catch(() => {});
     Promise.all([fetchManifest(), fetchRegionGroups().catch(() => null)])
       .then(([m, g]) => {
         if (!alive) return;

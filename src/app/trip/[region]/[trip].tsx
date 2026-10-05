@@ -6,10 +6,12 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { ReminderButton } from '@/components/ReminderButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Txt } from '@/components/ui';
+import { WaitCard } from '@/components/WaitCard';
 import { C } from '@/constants/theme';
 import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
-import { tripTimeline, type TripStop } from '@/data/queries';
+import { WAIT_FROM_MS, WAIT_UNTIL_MS, type Waiting } from '@/data/punctuality';
+import { lineLabel as lineLabelOf, tripTimeline, type TripStop } from '@/data/queries';
 import { arrow, t, useLang } from '@/i18n';
 
 const REMIND_BEFORE_MS = 5 * 60_000;
@@ -22,26 +24,64 @@ export default function TripScreen() {
   const [title, setTitle] = useState('');
   const [lineLabel, setLineLabel] = useState('');
   const [headsign, setHeadsign] = useState('');
+  /** Kod linii z GTFS i kody/położenie przystanków kursu – do zgłoszenia „czy był o czasie”. */
+  const [routeCode, setRouteCode] = useState('');
+  const [stopInfo, setStopInfo] = useState<Map<number, { code: string; lat: number; lon: number }>>(new Map());
+  const [now, setNow] = useState(() => Date.now());
   const scroll = useRef<ScrollView>(null);
   const depAt = dep && Number.isFinite(Number(dep)) ? Number(dep) : null;
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     (async () => {
       const { db } = await openRegion(region);
       const tl = await tripTimeline(db, Number(trip));
-      const route = await db.all<{ short_name: string; long_name: string; headsign: string }>(
-        `SELECT r.short_name, r.long_name, p.headsign FROM trips t JOIN patterns p ON p.id = t.pattern_id JOIN routes r ON r.id = p.route_id WHERE t.id = ?`,
+      const route = await db.all<{ short_name: string; long_name: string; headsign: string; code: string | null; type: number; agency: string | null }>(
+        `SELECT r.short_name, r.long_name, p.headsign, r.code, r.type, a.name AS agency
+           FROM trips t JOIN patterns p ON p.id = t.pattern_id JOIN routes r ON r.id = p.route_id LEFT JOIN agencies a ON a.id = r.agency_id
+          WHERE t.id = ?`,
         [Number(trip)],
       );
-      setTitle(route[0] ? `${route[0].short_name || route[0].long_name} ${arrow()} ${route[0].headsign}` : '');
-      setLineLabel(route[0] ? route[0].short_name || route[0].long_name : '');
-      setHeadsign(route[0]?.headsign ?? '');
+      const codes = await db.all<{ id: number; code: string | null; lat: number; lon: number }>(
+        'SELECT s.id, s.code, s.lat, s.lon FROM trips t JOIN pattern_stops ps ON ps.pattern_id = t.pattern_id JOIN stops s ON s.id = ps.stop_id WHERE t.id = ?',
+        [Number(trip)],
+      );
+      const r = route[0];
+      const label = r ? lineLabelOf(r.short_name, r.long_name, r.type, r.agency ?? '') : '';
+      setTitle(r ? `${label} ${arrow()} ${r.headsign}` : '');
+      setLineLabel(label);
+      setHeadsign(r?.headsign ?? '');
+      setRouteCode(r?.code ?? '');
+      setStopInfo(new Map(codes.map((c) => [c.id, { code: c.code ?? '', lat: c.lat, lon: c.lon }])));
       setStops(tl);
     })();
   }, [region, trip]);
 
   const boardIdx = stops?.findIndex((s) => String(s.stationId) === from) ?? -1;
   const hasEst = stops?.some((s) => s.est);
+  // „Czekam na ten autobus” – od godziny przed odjazdem do 45 min po (spóźnienia).
+  const board = stops && boardIdx >= 0 ? stops[boardIdx] : null;
+  const boardStop = board ? stopInfo.get(board.stopId) : undefined;
+  const waitTrip: Waiting | null =
+    board && boardStop?.code && routeCode && depAt && now > depAt - WAIT_FROM_MS && now < depAt + WAIT_UNTIL_MS
+      ? {
+          region,
+          route: routeCode,
+          stop: boardStop.code,
+          line: lineLabel,
+          headsign,
+          stationId: board.stationId,
+          stationName: stationNames(board).main,
+          lat: boardStop.lat,
+          lon: boardStop.lon,
+          sched: depAt,
+          est: board.est,
+        }
+      : null;
 
   return (
     <View style={s.screen}>
@@ -96,6 +136,9 @@ export default function TripScreen() {
             url={`/stop/${region}/${stops[boardIdx].stationId}`}
           />
         ) : null}
+
+        {/* Czy autobus był o czasie? – zgłoszenie pomaga poprawić godziny w rozkładzie. */}
+        {waitTrip ? <WaitCard trip={waitTrip} /> : null}
       </ScrollView>
     </View>
   );

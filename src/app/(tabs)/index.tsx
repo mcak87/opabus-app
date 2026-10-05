@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StartNotices } from '@/components/AppNotices';
 import { Icon } from '@/components/Icon';
 import { LodgingPrompt, LodgingReturn } from '@/components/LodgingReturn';
+import { WaitingBanner } from '@/components/WaitCard';
 import { Logo } from '@/components/Logo';
 import { EnableLocationCard, FavoritesSection, PopularSection } from '@/components/StartSections';
 import { SectionTitle, StationCard } from '@/components/StationCard';
@@ -185,6 +186,7 @@ export default function StartScreen() {
 
       <ScrollView contentContainerStyle={s.body} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         <StartNotices />
+        <WaitingBanner />
 
         {mode === 'wait' ? (
           <View style={s.center}>
