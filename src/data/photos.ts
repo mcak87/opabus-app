@@ -10,14 +10,16 @@ import Storage from 'expo-sqlite/kv-store';
 import { useEffect, useSyncExternalStore } from 'react';
 
 import { APP_VERSION } from '@/data/appConfig';
+import { recordContribution } from '@/data/badges';
 import { DATA_URL, getJson } from '@/data/packages';
 import { getLang } from '@/i18n';
 import { distanceM } from '@/lib/geo';
 
 export type StopPhoto = { id: string; station: number; stops: string[]; w: number; h: number; caption: string; created: string };
 type RegionPhotos = { fetched: number; photos: StopPhoto[] };
-/** Wysłane z tego telefonu i jeszcze niezatwierdzone („czeka na sprawdzenie”). */
-type Mine = { id: string; region: string; station: number; created: string };
+/** Wysłane z tego telefonu i jeszcze niezatwierdzone („czeka na sprawdzenie”). `first` – przystanek nie miał jeszcze
+ *  zdjęcia, gdy je wysyłano (odznaka „Odkrywca” po zatwierdzeniu). */
+type Mine = { id: string; region: string; station: number; created: string; first?: boolean };
 
 const K_REGION = 'photos.v1.';
 const K_MINE = 'photos.mine.v1';
@@ -69,8 +71,11 @@ export function refreshPhotos(region: string, force = false): Promise<void> {
         const next = { fetched: Date.now(), photos };
         cache.set(region, next);
         Storage.setItemSync(K_REGION + region, JSON.stringify(next));
-        // Zatwierdzone zdjęcia przestają być „moje, czekające”.
+        // Zatwierdzone zdjęcia przestają być „moje, czekające” – i liczą się do odznak.
         const before = mine.length;
+        for (const m of mine) {
+          if (m.region === region && photos.some((x) => x.id === m.id)) recordContribution({ kind: 'photoApproved', region, first: m.first });
+        }
         mine = mine.filter((m) => m.region !== region || !photos.some((x) => x.id === m.id));
         if (mine.length !== before) Storage.setItemSync(K_MINE, JSON.stringify(mine));
         notify();
@@ -123,6 +128,7 @@ export type Upload = {
 
 /** Zmniejsza zdjęcie (bez metadanych) i wysyła. ok – czeka na sprawdzenie; error – brak internetu albo odrzucone. */
 export async function uploadPhoto(u: Upload): Promise<'ok' | 'error'> {
+  const first = !regionPhotos(u.region).photos.some((p) => p.station === u.station || p.stops.some((c) => u.stops.includes(c)));
   const scale = Math.min(1, MAX_SIDE / Math.max(u.width, u.height));
   const ctx = ImageManipulator.manipulate(u.uri);
   if (scale < 1) ctx.resize({ width: Math.round(u.width * scale), height: Math.round(u.height * scale) });
@@ -161,10 +167,11 @@ export async function uploadPhoto(u: Upload): Promise<'ok' | 'error'> {
     if (!res.ok) return 'error';
     const { id } = (await res.json()) as { id?: string };
     if (id) {
-      mine = [...mine, { id, region: u.region, station: u.station, created: new Date().toISOString() }].slice(-30);
+      mine = [...mine, { id, region: u.region, station: u.station, created: new Date().toISOString(), first }].slice(-30);
       Storage.setItemSync(K_MINE, JSON.stringify(mine));
       notify();
     }
+    recordContribution({ kind: 'photoSent', region: u.region });
     // Lista regionu na nowo – nowe zdjęcia innych (i nasze, gdy już zatwierdzone) bez czekania godziny.
     refreshPhotos(u.region, true).catch(() => {});
     return 'ok';

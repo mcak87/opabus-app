@@ -5,12 +5,15 @@ import { useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { BadgeMedal } from '@/components/BadgeMedal';
 import { Icon } from '@/components/Icon';
 import { MapOfflineRow } from '@/components/MapOfflineRow';
 import { RegionList } from '@/components/RegionList';
 import { ExactAlarmHint } from '@/components/ReminderButton';
 import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
+import { BADGES, tierOf } from '@/data/badgeRules';
+import { useBadges } from '@/data/badges';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
 import { lodgingStopName } from '@/data/lodging';
 import { useNews } from '@/data/news';
@@ -25,6 +28,8 @@ export default function ProfileScreen() {
   const data = useData();
   const { lodging, remindLastBus } = useSettings();
   const news = useNews();
+  const badges = useBadges();
+  const earnedBadges = BADGES.filter((b) => tierOf(b, badges.stats) > 0);
   const [showLangs, setShowLangs] = useState(false);
   const [remindMsg, setRemindMsg] = useState(false);
   const openLodging = () => router.push({ pathname: '/planer/szukaj', params: { field: 'lodging' } });
@@ -89,6 +94,32 @@ export default function ProfileScreen() {
             </Pressable>
           ) : null}
         </View>
+
+        {/* Odznaki (Etap 1 programu nagród) – zdobyte w tym telefonie. */}
+        <Pressable accessibilityRole="button" onPress={() => router.push('/odznaki')} style={[s.card, { padding: 14, gap: 10 }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ flex: 1 }}>
+              <Txt w="extrabold" size={16} color={C.ink}>
+                {t('badgesTitle')}
+              </Txt>
+              <Txt w="semibold" size={13} color={C.muted}>
+                {t('badgesProfileCount', { n: earnedBadges.length, m: BADGES.length })}
+              </Txt>
+            </View>
+            <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
+          </View>
+          {earnedBadges.length ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {earnedBadges.map((b) => (
+                <BadgeMedal key={b.id} id={b.id} tier={tierOf(b, badges.stats)} size={52} />
+              ))}
+            </View>
+          ) : (
+            <Txt w="semibold" size={13} color={C.text2} style={{ lineHeight: 18 }}>
+              {t('badgesEmpty')}
+            </Txt>
+          )}
+        </Pressable>
 
         {/* Przypomnienie o ostatnim autobusie do noclegu (projekt: canvas „Profil”). */}
         {lodging ? (

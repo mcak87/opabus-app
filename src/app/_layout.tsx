@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { UpdateOverlay } from '@/components/AppNotices';
+import { BadgeCelebration } from '@/components/BadgeCelebration';
 import { C } from '@/constants/theme';
 import { DataProvider } from '@/data/DataContext';
 import { useLang } from '@/i18n';
@@ -79,6 +80,7 @@ export default function RootLayout() {
           <Stack.Screen name="s/[region]/[stops]" />
         </Stack>
         <UpdateOverlay />
+        <BadgeCelebration enabled={onboarded} />
       </DataProvider>
     </ThemeProvider>
   );

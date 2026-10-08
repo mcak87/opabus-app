@@ -7,6 +7,7 @@ import Storage from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 
 import { APP_VERSION } from '@/data/appConfig';
+import { recordContribution } from '@/data/badges';
 import { DATA_URL } from '@/data/packages';
 import { arrow, getLang, t } from '@/i18n';
 import { distanceM } from '@/lib/geo';
@@ -164,6 +165,11 @@ export async function flushReports() {
   for (const body of queue) {
     try {
       const res = await fetch(`${DATA_URL}/api/punctuality`, { method: 'POST', body: JSON.stringify(body) });
+      // Przyjęte zgłoszenie liczy się do odznak (tylko w telefonie).
+      if (res.ok) {
+        const b = body as { region?: string; date?: string };
+        recordContribution({ kind: 'report', region: b.region ?? '', date: b.date });
+      }
       // 400 – serwer odrzucił (np. za stare zgłoszenie): nie ponawiamy.
       if (!res.ok && res.status !== 400) left.push(body);
     } catch {

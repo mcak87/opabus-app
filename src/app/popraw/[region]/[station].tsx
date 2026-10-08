@@ -11,6 +11,7 @@ import { Icon } from '@/components/Icon';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { Button, Txt } from '@/components/ui';
 import { C, F, shadow } from '@/constants/theme';
+import { recordContribution } from '@/data/badges';
 import { stationNames } from '@/data/nearby';
 import { DATA_URL, openRegion } from '@/data/packages';
 import { stationById, stationStops, type Station, type StationStop } from '@/data/queries';
@@ -138,6 +139,8 @@ export default function FixStopScreen() {
         }),
       });
       if (!res.ok) throw new Error(String(res.status));
+      // Jedna poprawka przystanku do odznak (kolejne zgłoszenia tego samego przystanku się nie liczą).
+      if (!Storage.getItemSync(sentKey(region, station))) recordContribution({ kind: 'fix', region });
       Storage.setItemSync(sentKey(region, station), new Date().toISOString());
       setSent(true);
     } catch {

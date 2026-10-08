@@ -66,8 +66,10 @@ export function rtlRestartNeeded(): boolean {
 /** Strzałka „do” w tekstach (A → B); w układzie od prawej – w drugą stronę. */
 export const arrow = () => (I18nManager.isRTL ? '←' : '→');
 
-/** Wielkie litery do nagłówków sekcji; greckie bez akcentów („ΣΤΟ ΚΙΝΗΤΟ”, nie „ΚΙΝΗΤΌ”) – tak pisze się po grecku. */
-export const upper = (s: string) => s.toUpperCase().normalize('NFD').replace(/([Ͱ-Ͽ])́/g, '$1').normalize('NFC');
+/** Wielkie litery do nagłówków sekcji; greckie bez akcentów („ΣΤΟ ΚΙΝΗΤΟ”, nie „ΚΙΝΗΤΌ”) – tak pisze się po grecku.
+ *  Po turecku „i” → „İ” (z kropką; „ı” → „I” robi już toUpperCase) – bez polegania na toLocaleUpperCase w Hermesie. */
+export const upper = (s: string) =>
+  (current === 'tr' ? s.replace(/i/g, 'İ') : s).toUpperCase().normalize('NFD').replace(/([Ͱ-Ͽ])́/g, '$1').normalize('NFC');
 
 /** Przecinek dziesiętny („2,50 €”, „1,5 km”) – poza angielskim i hebrajskim. */
 export const decimal = (s: string) => (current === 'en' || current === 'he' ? s : s.replace('.', ','));
