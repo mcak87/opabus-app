@@ -19,23 +19,29 @@ export function prepareItems(raw: RawItem[]): PlaceItem[] {
 
 /**
  * Wyrazy pospolite w językach aplikacji → jak nazywa to OpenStreetMap (po angielsku albo po grecku). „Stare Miasto”
- * znajduje „Medieval city of Rhodes”, „lotnisko” – „Rhodes International Airport”. Grupa = te same znaczenie.
+ * znajduje „Medieval city of Rhodes”, „lotnisko” – „Rhodes International Airport”. Grupa = to samo znaczenie;
+ * `cats` – w jakich rodzajach miejsc szukać odpowiedników („lotnisko” to lotnisko, a nie ulica „…Airport” ani kawiarnia).
  */
-const SYNONYMS: string[][][] = [
-  ['stare miasto', 'old town', 'old city', 'medieval city', 'medieval town', 'palia poli', 'mesaioniki poli', 'altstadt', 'citta vecchia',
-    'centro storico', 'eski sehir', 'gamla stan', 'gamlebyen', 'gamle by', 'vanha kaupunki'],
-  // bez „aerodromio” – tak nazywają się też lotniska wojskowe (Maritsa) i ulice „…Aerodromio”
-  ['lotnisko', 'airport', 'aerolimenas', 'flughafen', 'aeroporto', 'havalimani', 'lentoasema', 'lufthavn', 'flygplats'],
-  ['plaza', 'beach', 'paralia', 'strand', 'spiaggia', 'plaj', 'uimaranta'],
-  ['port', 'harbour', 'harbor', 'limani', 'hafen', 'liman', 'satama', 'havn', 'hamn'],
-  ['zamek', 'castle', 'kastro', 'burg', 'castello', 'linna'],
-  ['klasztor', 'monastery', 'moni', 'kloster', 'monastero', 'manastir', 'luostari'],
-].map((g) => g.map(words));
+const SYNONYMS: { cats: PlaceCat[]; group: string[][] }[] = [
+  { cats: ['v', 's'], group: ['stare miasto', 'old town', 'old city', 'medieval city', 'medieval town', 'palia poli', 'mesaioniki poli',
+    'altstadt', 'citta vecchia', 'centro storico', 'eski sehir', 'gamla stan', 'gamlebyen', 'gamle by', 'vanha kaupunki'] },
+  // bez „aerodromio” – tak nazywają się też ulice „…Aerodromio”
+  { cats: ['t'], group: ['lotnisko', 'airport', 'aerolimenas', 'flughafen', 'aeroporto', 'havalimani', 'lentoasema', 'lufthavn', 'flygplats'] },
+  { cats: ['b'], group: ['plaza', 'beach', 'paralia', 'strand', 'spiaggia', 'plaj', 'uimaranta'] },
+  { cats: ['t'], group: ['port', 'harbour', 'harbor', 'limani', 'hafen', 'liman', 'satama', 'havn', 'hamn'] },
+  { cats: ['s'], group: ['zamek', 'castle', 'kastro', 'burg', 'castello', 'linna'] },
+  { cats: ['s', 'w'], group: ['klasztor', 'monastery', 'moni', 'kloster', 'monastero', 'manastir', 'luostari'] },
+].map(({ cats, group }) => ({ cats: cats as PlaceCat[], group: group.map(words) }));
 
-/** Zapytanie i jego odpowiedniki: fraza z SYNONYMS (ostatnie słowo może być niedokończone) zamieniona na pozostałe z grupy. */
-export function queryVariants(q: string[]): string[][] {
-  const out = new Map([[q.join(' '), q]]);
-  for (const group of SYNONYMS) {
+export type QueryVariant = { words: string[]; cats: PlaceCat[] | null };
+
+/**
+ * Zapytanie i jego odpowiedniki: fraza z SYNONYMS (ostatnie słowo może być niedokończone) zamieniona na pozostałe
+ * z grupy. Pierwsze – zapytanie bez zmian, szukane we wszystkich rodzajach miejsc (cats = null).
+ */
+export function queryVariants(q: string[]): QueryVariant[] {
+  const out = new Map<string, QueryVariant>([[q.join(' '), { words: q, cats: null }]]);
+  for (const { cats, group } of SYNONYMS) {
     for (const phrase of group) {
       for (let i = 0; i + phrase.length <= q.length; i++) {
         const part = q.slice(i, i + phrase.length);
@@ -43,7 +49,8 @@ export function queryVariants(q: string[]): string[][] {
         if (!hit) continue;
         for (const alt of group) {
           const v = [...q.slice(0, i), ...alt, ...q.slice(i + phrase.length)];
-          out.set(v.join(' '), v);
+          const key = v.join(' ');
+          if (!out.has(key)) out.set(key, { words: v, cats });
         }
       }
     }
@@ -79,7 +86,7 @@ export function searchItems(byRegion: [string, PlaceItem[]][], query: string, ne
         if (n) push(region, it, it.la + n[1], it.lo + n[2], ` ${n[0]}`, 30);
         continue;
       }
-      if (variants.some((v) => matchesWords(it.words, v))) push(region, it, it.la, it.lo, '', 0);
+      if (variants.some((v) => (!v.cats || v.cats.includes(it.cat)) && matchesWords(it.words, v.words))) push(region, it, it.la, it.lo, '', 0);
     }
   }
   return hits

@@ -44,9 +44,11 @@ expect('stare miasto', rodos, 'stare miasto', faliraki, medieval);
 expect('stare miasto – w trakcie pisania', rodos, 'stare mia', faliraki, medieval);
 expect('old town', rodos, 'old town', faliraki, medieval);
 expect('altstadt', rodos, 'Altstadt', faliraki, medieval);
-expect('lotnisko', rodos, 'lotnisko', faliraki, (n) => n.some((x) => /airport|aerolimen|aerodrom/i.test(x)));
+expect('lotnisko', rodos, 'lotnisko', faliraki, (n) => /diagoras/i.test(n[0] ?? '') && !n.some((x) => /maritsa|maritson/i.test(x)));
+// Tylko lotniska pasażerskie (z kodem IATA) – bez baz wojskowych (miejsca_osm.mjs, decyzja Michała 09.10.2026).
+expect('bez lotnisk wojskowych', ateny, 'air base', syntagma, (n) => !n.some((x) => /tatoi|tanagra|elefsina|\[t\]/i.test(x)));
 expect('plaża', rodos, 'plaża faliraki', faliraki, (n) => n.some((x) => /beach|paralia/i.test(x) && /faliraki/i.test(x)));
-expect('stare miasto – Ateny', ateny, 'stare miasto', syntagma, (n) => n.length > 0);
+expect('stare miasto – Ateny: bez hoteli i knajp „Old Town…”', ateny, 'stare miasto', syntagma, (n) => n.every((x) => /\[(v|s)\]$/.test(x)));
 
 console.log(fail ? `${fail} błędów` : 'Wszystko OK');
 process.exitCode = fail ? 1 : 0;
