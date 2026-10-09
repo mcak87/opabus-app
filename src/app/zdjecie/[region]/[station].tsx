@@ -20,11 +20,13 @@ type Picked = { uri: string; width: number; height: number };
 
 export default function AddStopPhoto() {
   useLang();
-  const { region, station } = useLocalSearchParams<{ region: string; station: string }>();
+  // `caption` – podpis podpowiedziany przez ekran, z którego przyszliśmy (np. „Rozkład na przystanku” przy „Poza sezonem”).
+  const params = useLocalSearchParams<{ region: string; station: string; caption?: string }>();
+  const { region, station } = params;
   const [st, setSt] = useState<Station | null>(null);
   const [codes, setCodes] = useState<string[]>([]);
   const [photo, setPhoto] = useState<Picked | null>(null);
-  const [caption, setCaption] = useState('');
+  const [caption, setCaption] = useState(params.caption ?? '');
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<Key | null>(null);

@@ -232,7 +232,7 @@ export default function StartScreen() {
                   sub={n.sub}
                   departures={st.departures}
                   nowSec={now.sec}
-                  emptyText={t('noDeparturesSoon')}
+                  emptyText={(data.installed[st.region]?.validTo ?? Infinity) < now.date ? t('offSeasonShort') : t('noDeparturesSoon')}
                   right={
                     <View style={s.walk}>
                       <Icon name="walk" size={18} color={C.text2} />

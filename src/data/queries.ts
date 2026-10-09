@@ -295,6 +295,23 @@ export async function stationDepartures(
     });
 }
 
+export type Agency = { name: string; phone: string; url: string };
+
+/** Przewoźnicy obsługujący stację (do „Zapytaj przewoźnika”, gdy rozkład wygasł). */
+export async function stationAgencies(db: Db, stationId: number): Promise<Agency[]> {
+  const rows = await db.all<{ name: string | null; phone: string | null; url: string | null }>(
+    `SELECT DISTINCT a.name AS name, a.phone AS phone, a.url AS url
+       FROM stops s
+       JOIN pattern_stops ps ON ps.stop_id = s.id
+       JOIN patterns p ON p.id = ps.pattern_id
+       JOIN routes r ON r.id = p.route_id
+       JOIN agencies a ON a.id = r.agency_id
+      WHERE s.station_id = ?`,
+    [stationId],
+  );
+  return rows.map((r) => ({ name: r.name ?? '', phone: (r.phone ?? '').trim(), url: (r.url ?? '').trim() })).filter((a) => a.name);
+}
+
 /** Ostatni odjazd dziś w każdym kierunku (headsign) – do karty „Ostatni autobus”. */
 export async function lastDeparturesToday(db: Db, cal: Calendar, stationId: number, now: Now): Promise<Departure[]> {
   const all = await stationDepartures(db, cal, stationId, now, 0, 2 * 86400);

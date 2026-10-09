@@ -237,7 +237,7 @@ export default function StopsMap() {
             sub={[names.sub, data.regionName(selected.region)].filter(Boolean).join(' · ')}
             departures={deps}
             nowSec={nowSec}
-            emptyText={t('noDeparturesSoon')}
+            emptyText={(data.installed[selected.region]?.validTo ?? Infinity) < athensNow().date ? t('offSeasonShort') : t('noDeparturesSoon')}
             right={
               <Pressable accessibilityRole="button" accessibilityLabel={t('close')} hitSlop={10} onPress={() => setSelected(null)}>
                 <Icon name="x" size={20} color={C.muted} stroke={2.4} />

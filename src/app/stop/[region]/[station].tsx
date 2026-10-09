@@ -5,6 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 
 import { Icon } from '@/components/Icon';
 import { LodgingReturn } from '@/components/LodgingReturn';
+import { OffSeasonCard } from '@/components/OffSeason';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { AddPhotoLink, StopPhotos } from '@/components/StopPhotos';
 import { LineBadge, Txt } from '@/components/ui';
@@ -82,16 +83,18 @@ export default function StopScreen() {
     <View style={s.screen}>
       <ScreenHeader region={region} kicker={t('departuresTitle')} title={names?.main ?? '…'} sub={names?.sub} right={star} />
       <ScrollView contentContainerStyle={s.body}>
-        {meta ? (
-          <Txt w="bold" size={13} color={expired ? C.orangeText : C.muted} style={{ paddingHorizontal: 8 }}>
-            {expired ? t('timetableExpired', { date: formatDate(meta.validTo) }) : t('timetableValid', { date: formatDate(meta.validTo) })}
+        {meta && !expired ? (
+          <Txt w="bold" size={13} color={C.muted} style={{ paddingHorizontal: 8 }}>
+            {t('timetableValid', { date: formatDate(meta.validTo) })}
           </Txt>
         ) : null}
+        {/* Rozkład wygasł, nowego jeszcze nie ma – „Poza sezonem” zamiast pustej listy odjazdów. */}
+        {meta && expired ? <OffSeasonCard region={region} station={Number(station)} validFrom={meta.validFrom} validTo={meta.validTo} /> : null}
 
         {/* Zdjęcia przystanku od użytkowników – pomagają go znaleźć (decyzja Michała 05.10.2026). */}
         <StopPhotos region={region} station={Number(station)} stopCodes={codes} />
 
-        {st ? (
+        {st && !expired ? (
           <LodgingReturn
             region={region}
             from={{ lat: st.lat, lon: st.lon }}
@@ -102,7 +105,7 @@ export default function StopScreen() {
 
         {!deps && !error ? <ActivityIndicator color={C.blue} style={{ marginTop: 24 }} /> : null}
         {error ? <Txt color={C.orangeText}>{t('errorGeneric')}</Txt> : null}
-        {deps && deps.length === 0 ? <Txt color={C.muted}>{t('noDeparturesSoon')}</Txt> : null}
+        {deps && deps.length === 0 && !expired ? <Txt color={C.muted}>{t('noDeparturesSoon')}</Txt> : null}
 
         {deps?.map((d) => {
           const min = minutesTo(d.dep, now.sec);
@@ -171,7 +174,8 @@ export default function StopScreen() {
             </View>
           </View>
         ) : null}
-        {st ? <AddPhotoLink region={region} station={st.id} stopCodes={codes} /> : null}
+        {/* Poza sezonem karta wyżej prosi już o zdjęcie (rozkładu na przystanku) – bez drugiej prośby. */}
+        {st && !expired ? <AddPhotoLink region={region} station={st.id} stopCodes={codes} /> : null}
         {st ? (
           approx ? (
             <Pressable accessibilityRole="button" onPress={openFix} style={s.fixCard}>

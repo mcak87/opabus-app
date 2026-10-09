@@ -207,7 +207,7 @@ export default function ResultsScreen() {
               <View style={s.info}>
                 <Icon name="route" size={22} color={C.orange} />
                 <Txt w="bold" size={15} color={C.text2} style={{ flex: 1 }}>
-                  {t('noRoute')}
+                  {validTo && validTo < athensNow().date ? t('offSeasonPlanner', { date: formatDate(validTo) }) : t('noRoute')}
                 </Txt>
               </View>
             ) : null}

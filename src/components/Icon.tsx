@@ -161,6 +161,13 @@ const ICONS = {
     </>
   ),
   news: P('M4 5h13v14a2 2 0 0 1-2 2H5a1 1 0 0 1-1-1zM17 9h3v10a2 2 0 0 1-4 0M8 9h5M8 13h5M8 17h3'),
+  calendarClock: (
+    <>
+      <Rect x="3" y="5" width="18" height="16" rx="2" />
+      {P('M3 10h18M8 3v4M16 3v4M12 13v3l2 1.5')}
+    </>
+  ),
+  phone: P('M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z'),
 } as const;
 
 export type IconName = keyof typeof ICONS;

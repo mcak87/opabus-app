@@ -43,6 +43,18 @@ export function addDays(day: ServiceDay, n: number): ServiceDay {
   return ymd(y, m, d + n);
 }
 
+/** Dzień rozkładu RRRRMMDD → ServiceDay (z dniem tygodnia). */
+export const serviceDay = (date: number): ServiceDay => addDays({ date, weekday: 0 }, 0);
+
+/** „Ostatni znany rozkład” po jego końcu: ten sam dzień tygodnia co `today` z ostatniego tygodnia ważności
+ *  (nie wcześniej niż `validFrom`; przy bardzo krótkim okresie – ostatni dzień ważności). */
+export function lastKnownDay(validTo: number, validFrom: number, today: ServiceDay): Now {
+  const end = serviceDay(validTo);
+  let d = addDays(end, -((end.weekday - today.weekday + 7) % 7));
+  if (d.date < validFrom) d = end;
+  return { ...d, sec: 0, prev: addDays(d, -1) };
+}
+
 /** Chwila (ms od 1970) dla dnia rozkładu i sekund od północy czasu ateńskiego (sekundy mogą przekraczać 24 h). */
 export function athensEpoch(day: ServiceDay, sec: number): number {
   const wall = (d: ServiceDay, s: number) =>
