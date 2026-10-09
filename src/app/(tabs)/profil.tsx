@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BadgeMedal } from '@/components/BadgeMedal';
 import { Icon } from '@/components/Icon';
 import { MapOfflineRow } from '@/components/MapOfflineRow';
-import { RegionList } from '@/components/RegionList';
+import { PackageProgress, RegionList } from '@/components/RegionList';
 import { ExactAlarmHint } from '@/components/ReminderButton';
 import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
@@ -276,6 +276,7 @@ export default function ProfileScreen() {
                     <Icon name="trash" size={20} color={C.muted} />
                   </Pressable>
                 </View>
+                <PackageProgress region={i.region} style={s.progress} />
                 {OVERLAY_REGIONS.has(i.region) ? null : (
                   <MapOfflineRow region={i.region} bbox={data.manifest?.packages.find((p) => p.region === i.region)?.bbox} />
                 )}
@@ -326,6 +327,7 @@ const s = StyleSheet.create({
   menuLine: { borderTopWidth: 1, borderTopColor: C.lineSoft },
   badge: { minWidth: 26, height: 26, borderRadius: 13, paddingHorizontal: 7, backgroundColor: C.orangeText, alignItems: 'center', justifyContent: 'center' },
   langRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 46, paddingHorizontal: 20, borderTopWidth: 1, borderTopColor: C.lineSoft },
+  progress: { paddingHorizontal: 16, paddingBottom: 10 },
   regionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 60, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
   dl: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   del: { width: 44, height: 44, borderRadius: 22, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' },

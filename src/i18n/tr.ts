@@ -67,6 +67,7 @@ export const tr: Record<keyof typeof pl, string> = {
   zoomOut: 'Uzaklaştır',
   mapOfflineGet: 'Çevrimdışı harita · yakl. {size}',
   mapDownloading: 'Harita indiriliyor… %{pct} · {size}',
+  pkgDownloading: 'Sefer saatleri indiriliyor… %{pct} · {size}',
   mapReady: 'Çevrimdışı harita · {size}',
   mapError: 'Harita indirilemedi',
   mapDownload: 'Çevrimdışı haritayı indir',

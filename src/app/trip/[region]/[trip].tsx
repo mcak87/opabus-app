@@ -5,7 +5,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { ReminderButton } from '@/components/ReminderButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { Txt } from '@/components/ui';
+import { Txt, useTextWidth } from '@/components/ui';
 import { WaitCard } from '@/components/WaitCard';
 import { C } from '@/constants/theme';
 import { stationNames } from '@/data/nearby';
@@ -17,6 +17,7 @@ import { arrow, t, useLang } from '@/i18n';
 const REMIND_BEFORE_MS = 5 * 60_000;
 
 export default function TripScreen() {
+  const timeW = useTextWidth(60);
   useLang();
   /** dep – chwila odjazdu z przystanku `from` (ms), przekazana z listy odjazdów. */
   const { region, trip, from, dep } = useLocalSearchParams<{ region: string; trip: string; from?: string; dep?: string }>();
@@ -103,7 +104,7 @@ export default function TripScreen() {
                 key={st.seq}
                 style={[s.row, board && s.boardRow]}
                 onLayout={board ? (e) => scroll.current?.scrollTo({ y: Math.max(0, e.nativeEvent.layout.y - 120), animated: false }) : undefined}>
-                <Txt w={board ? 'black' : 'extrabold'} size={14} color={passed ? C.faint : C.ink} style={s.time}>
+                <Txt w={board ? 'black' : 'extrabold'} size={14} color={passed ? C.faint : C.ink} style={[s.time, { width: timeW }]}>
                   {st.est ? `~${st.time}` : st.time}
                 </Txt>
                 <View style={s.rail}>

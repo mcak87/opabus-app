@@ -8,7 +8,7 @@ import { LodgingReturn } from '@/components/LodgingReturn';
 import { OffSeasonCard } from '@/components/OffSeason';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { AddPhotoLink, StopPhotos } from '@/components/StopPhotos';
-import { LineBadge, Txt } from '@/components/ui';
+import { LineBadge, Txt, useTextWidth } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { minutesTo, stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
@@ -67,6 +67,8 @@ export default function StopScreen() {
   const fav = isFavorite(favorites, region, Number(station));
   const openFix = () => router.push({ pathname: '/popraw/[region]/[station]', params: { region, station: String(station) } });
   const isLodgingStop = !!st && !!lodging && lodging.region === region && distanceM(st.lat, st.lon, lodging.lat, lodging.lon) < 150;
+  const timeW = useTextWidth(64);
+  const lastW = useTextWidth(56);
 
   const star = st ? (
     <Pressable
@@ -120,7 +122,7 @@ export default function StopScreen() {
                 })
               }
               style={({ pressed }) => [s.row, pressed && { opacity: 0.8 }]}>
-              <View style={s.timeCol}>
+              <View style={[s.timeCol, { width: timeW }]}>
                 <Txt w="black" size={20} color={C.ink}>
                   {d.time}
                 </Txt>
@@ -163,7 +165,7 @@ export default function StopScreen() {
               </Txt>
               {last.slice(-4).map((d) => (
                 <View key={d.headsign} style={s.badgeRow}>
-                  <Txt w="black" size={18} color={C.orangeDeep} style={{ minWidth: 56 }}>
+                  <Txt w="black" size={18} color={C.orangeDeep} style={{ minWidth: lastW }}>
                     {d.time}
                   </Txt>
                   <Txt w="bold" size={14} color={C.orangeDeep} numberOfLines={1} style={{ flex: 1 }}>

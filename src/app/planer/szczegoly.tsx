@@ -8,7 +8,7 @@ import { ReminderButton } from '@/components/ReminderButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { StopPhotoThumb } from '@/components/StopPhotos';
 import { stopName } from '@/components/TripOption';
-import { LineBadge, Txt } from '@/components/ui';
+import { LineBadge, Txt, useTextWidth } from '@/components/ui';
 import { C, lineColor, shadow } from '@/constants/theme';
 import { modeOf } from '@/data/queries';
 import { arrow, getLang, pluralKey, t, useLang } from '@/i18n';
@@ -137,9 +137,10 @@ function TripReminder({ net, leave, day, ride, firstWalk }: { net: Net; leave: n
 }
 
 function Point({ time: tm, title, kicker, color, last }: { time: string; title: string; kicker: string; color: string; last?: boolean }) {
+  const tw = useTextWidth(92);
   return (
     <View style={s.row}>
-      <Txt w="black" size={15} color={C.ink} style={s.time} numberOfLines={1}>
+      <Txt w="black" size={15} color={C.ink} style={[s.time, { width: tw }]} numberOfLines={1}>
         {tm}
       </Txt>
       <View style={s.rail}>
@@ -159,9 +160,10 @@ function Point({ time: tm, title, kicker, color, last }: { time: string; title: 
 }
 
 function WalkRow({ text }: { text: string }) {
+  const tw = useTextWidth(92);
   return (
     <View style={s.row}>
-      <View style={s.time} />
+      <View style={[s.time, { width: tw }]} />
       <View style={s.rail}>
         <View style={[s.line, s.lineDashed]} />
       </View>
@@ -176,6 +178,8 @@ function WalkRow({ text }: { text: string }) {
 }
 
 function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }) {
+  const tw = useTextWidth(92);
+  const midW = useTextWidth(70);
   const [open, setOpen] = useState(false);
   const pat = net.patterns[leg.pattern];
   const r = net.routes.get(pat.route);
@@ -191,7 +195,7 @@ function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }
   return (
     <>
       <View style={s.row}>
-        <Txt w="black" size={15} color={C.ink} style={s.time} numberOfLines={1}>
+        <Txt w="black" size={15} color={C.ink} style={[s.time, { width: tw }]} numberOfLines={1}>
           {time(leg.dep, leg.depEst)}
         </Txt>
         <View style={s.rail}>
@@ -242,7 +246,7 @@ function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }
           {open
             ? middle.map((m, k) => (
                 <View key={k} style={s.midRow}>
-                  <Txt w="bold" size={13} color={C.muted} style={{ width: 70 }}>
+                  <Txt w="bold" size={13} color={C.muted} style={{ width: midW }}>
                     {m.time}
                   </Txt>
                   <Txt w="semibold" size={13} color={C.text2} style={{ flex: 1 }} numberOfLines={1}>
@@ -254,7 +258,7 @@ function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }
         </View>
       </View>
       <View style={s.row}>
-        <Txt w="black" size={15} color={C.ink} style={s.time} numberOfLines={1}>
+        <Txt w="black" size={15} color={C.ink} style={[s.time, { width: tw }]} numberOfLines={1}>
           {time(leg.arr, leg.arrEst)}
         </Txt>
         <View style={s.rail}>

@@ -67,6 +67,7 @@ export const it: Record<keyof typeof pl, string> = {
   zoomOut: 'Riduci',
   mapOfflineGet: 'Mappa offline · ca. {size}',
   mapDownloading: 'Download mappa… {pct}% · {size}',
+  pkgDownloading: 'Download orari… {pct}% · {size}',
   mapReady: 'Mappa offline · {size}',
   mapError: 'Impossibile scaricare la mappa',
   mapDownload: 'Scarica la mappa offline',

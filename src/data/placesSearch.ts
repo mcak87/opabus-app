@@ -17,6 +17,40 @@ export function prepareItems(raw: RawItem[]): PlaceItem[] {
   });
 }
 
+/**
+ * Wyrazy pospolite w językach aplikacji → jak nazywa to OpenStreetMap (po angielsku albo po grecku). „Stare Miasto”
+ * znajduje „Medieval city of Rhodes”, „lotnisko” – „Rhodes International Airport”. Grupa = te same znaczenie.
+ */
+const SYNONYMS: string[][][] = [
+  ['stare miasto', 'old town', 'old city', 'medieval city', 'medieval town', 'palia poli', 'mesaioniki poli', 'altstadt', 'citta vecchia',
+    'centro storico', 'eski sehir', 'gamla stan', 'gamlebyen', 'gamle by', 'vanha kaupunki'],
+  // bez „aerodromio” – tak nazywają się też lotniska wojskowe (Maritsa) i ulice „…Aerodromio”
+  ['lotnisko', 'airport', 'aerolimenas', 'flughafen', 'aeroporto', 'havalimani', 'lentoasema', 'lufthavn', 'flygplats'],
+  ['plaza', 'beach', 'paralia', 'strand', 'spiaggia', 'plaj', 'uimaranta'],
+  ['port', 'harbour', 'harbor', 'limani', 'hafen', 'liman', 'satama', 'havn', 'hamn'],
+  ['zamek', 'castle', 'kastro', 'burg', 'castello', 'linna'],
+  ['klasztor', 'monastery', 'moni', 'kloster', 'monastero', 'manastir', 'luostari'],
+].map((g) => g.map(words));
+
+/** Zapytanie i jego odpowiedniki: fraza z SYNONYMS (ostatnie słowo może być niedokończone) zamieniona na pozostałe z grupy. */
+export function queryVariants(q: string[]): string[][] {
+  const out = new Map([[q.join(' '), q]]);
+  for (const group of SYNONYMS) {
+    for (const phrase of group) {
+      for (let i = 0; i + phrase.length <= q.length; i++) {
+        const part = q.slice(i, i + phrase.length);
+        const hit = part.join('').length >= 4 && part.every((w, j) => (j < phrase.length - 1 ? w === phrase[j] : phrase[j].startsWith(w)));
+        if (!hit) continue;
+        for (const alt of group) {
+          const v = [...q.slice(0, i), ...alt, ...q.slice(i + phrase.length)];
+          out.set(v.join(' '), v);
+        }
+      }
+    }
+  }
+  return [...out.values()];
+}
+
 /** Ważność rodzaju miejsca w wynikach (miejscowość i hotel przed ulicą, ulica przed knajpą). */
 const WEIGHT: Record<PlaceCat, number> = { v: 30, h: 26, b: 26, s: 24, t: 24, e: 20, m: 20, w: 14, p: 14, r: 12, a: 10, f: 8 };
 
@@ -27,6 +61,7 @@ export function searchItems(byRegion: [string, PlaceItem[]][], query: string, ne
   const whole = fold(query);
   const num = q.find((w) => /\d/.test(w));
   const textQ = q.filter((w) => !/\d/.test(w));
+  const variants = queryVariants(q);
   const hits: (PlaceHit & { score: number })[] = [];
   const push = (region: string, it: PlaceItem, la: number, lo: number, suffix: string, bonus: number) => {
     const lat = la / 1e5;
@@ -44,7 +79,7 @@ export function searchItems(byRegion: [string, PlaceItem[]][], query: string, ne
         if (n) push(region, it, it.la + n[1], it.lo + n[2], ` ${n[0]}`, 30);
         continue;
       }
-      if (matchesWords(it.words, q)) push(region, it, it.la, it.lo, '', 0);
+      if (variants.some((v) => matchesWords(it.words, v))) push(region, it, it.la, it.lo, '', 0);
     }
   }
   return hits

@@ -1,6 +1,7 @@
 // Lista regionów do pobrania, pogrupowana jak na stronie (regions.json). Używana w Profilu i na ekranie powitalnym.
+// Tu także pasek postępu pobierania rozkładów regionu (lista, Start, wybór regionu, Profil).
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { C } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
@@ -14,6 +15,30 @@ import { Txt } from './ui';
 /** Rozmiar paczki: „89 KB”, „1,4 MB”. */
 export const fileSize = (bytes: number) =>
   bytes < 1e6 ? `${Math.max(1, Math.round(bytes / 1e3))} KB` : `${decimal((bytes / 1e6).toFixed(1))} MB`;
+
+/** Pasek postępu pobierania rozkładów regionu – jak w wierszu „Mapa offline”; widoczny tylko w trakcie pobierania. */
+export function PackageProgress({ region, style }: { region: string; style?: StyleProp<ViewStyle> }) {
+  const data = useData();
+  const part = data.progress[region];
+  if (!data.busy[region] || part === undefined) return null;
+  const pct = Math.round(part * 100);
+  const text = t('pkgDownloading', { pct, size: fileSize(data.manifest?.packages.find((p) => p.region === region)?.bytes ?? 0) });
+  return (
+    <View
+      style={[s.progress, style]}
+      accessible
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: 100, now: pct }}
+      accessibilityLabel={`${data.regionName(region)}: ${text}`}>
+      <Txt w="bold" size={14} color={C.text2}>
+        {text}
+      </Txt>
+      <View style={s.bar}>
+        <View style={[s.barFill, { width: `${Math.max(3, pct)}%` }]} />
+      </View>
+    </View>
+  );
+}
 
 export function RegionList({
   right,
@@ -73,9 +98,13 @@ export function RegionList({
                       <Txt w="extrabold" size={16} color={C.ink}>
                         {data.regionName(p.region)}
                       </Txt>
-                      <Txt w="bold" size={13} color={C.muted}>
-                        {[t('validTo', { date: formatDate(Number(p.valid_to)) }), fileSize(p.bytes)].join(' · ')}
-                      </Txt>
+                      {data.busy[p.region] && data.progress[p.region] !== undefined ? (
+                        <PackageProgress region={p.region} style={{ marginTop: 4 }} />
+                      ) : (
+                        <Txt w="bold" size={13} color={C.muted}>
+                          {[t('validTo', { date: formatDate(Number(p.valid_to)) }), fileSize(p.bytes)].join(' · ')}
+                        </Txt>
+                      )}
                     </View>
                     {right(p)}
                   </Pressable>
@@ -88,6 +117,9 @@ export function RegionList({
 }
 
 const s = StyleSheet.create({
+  progress: { gap: 4 },
+  bar: { height: 6, borderRadius: 3, backgroundColor: C.sky, overflow: 'hidden' },
+  barFill: { height: 6, borderRadius: 3, backgroundColor: C.blue },
   regionRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 60, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
   groupRow: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 48, paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.lineSoft },
 });

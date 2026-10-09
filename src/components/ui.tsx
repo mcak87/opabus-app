@@ -1,6 +1,17 @@
 // Wspólne elementy interfejsu OpaBus.
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type StyleProp, type TextProps, type TextStyle, type ViewStyle } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  type StyleProp,
+  type TextProps,
+  type TextStyle,
+  type ViewStyle,
+} from 'react-native';
 import { SvgXml } from 'react-native-svg';
 
 import { PANORAMAS } from '@/constants/panoramas';
@@ -18,6 +29,15 @@ export function Txt({
   ...rest
 }: TextProps & { w?: Weight; size?: number; color?: string; style?: StyleProp<TextStyle> }) {
   return <Text {...rest} style={[{ fontFamily: F[w], fontSize: size, color }, style]} />;
+}
+
+/**
+ * Szerokość kolumny z tekstem (np. godziny „12:40 / za 18 min”), która rośnie razem z dużą czcionką ustawioną w telefonie
+ * – inaczej przy 130% „za 18 min” łamie się na dwie linie.
+ */
+export function useTextWidth(base: number): number {
+  const { fontScale } = useWindowDimensions();
+  return Math.round(base * Math.min(Math.max(fontScale, 1), 2));
 }
 
 export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {

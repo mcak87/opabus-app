@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Icon } from '@/components/Icon';
 import { Logo } from '@/components/Logo';
-import { fileSize, RegionList } from '@/components/RegionList';
+import { fileSize, PackageProgress, RegionList } from '@/components/RegionList';
 import { Button, PanoramaHeader, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
@@ -137,6 +137,7 @@ export default function RegionStep() {
 
         <View style={[s.bottom, { paddingBottom: insets.bottom + 12 }]}>
           {errorText}
+          <PackageProgress region={detected.region} />
           <Txt w="semibold" size={14} color={C.muted} style={{ textAlign: 'center' }}>
             {t('regionMoreLater')}
           </Txt>

@@ -67,6 +67,7 @@ export const sv: Record<keyof typeof pl, string> = {
   zoomOut: 'Zooma ut',
   mapOfflineGet: 'Offlinekarta · ca {size}',
   mapDownloading: 'Laddar ner karta… {pct} % · {size}',
+  pkgDownloading: 'Laddar ner tidtabeller… {pct} % · {size}',
   mapReady: 'Offlinekarta · {size}',
   mapError: 'Kunde inte ladda ner kartan',
   mapDownload: 'Ladda ner offlinekarta',

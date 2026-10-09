@@ -67,6 +67,7 @@ export const fi: Record<keyof typeof pl, string> = {
   zoomOut: 'Loitonna',
   mapOfflineGet: 'Offline-kartta · n. {size}',
   mapDownloading: 'Ladataan karttaa… {pct} % · {size}',
+  pkgDownloading: 'Ladataan aikatauluja… {pct} % · {size}',
   mapReady: 'Offline-kartta · {size}',
   mapError: 'Kartan lataus epäonnistui',
   mapDownload: 'Lataa offline-kartta',

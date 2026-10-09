@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
-import { LineBadge, Txt } from '@/components/ui';
+import { LineBadge, Txt, useTextWidth } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { openRegion } from '@/data/packages';
 import { stationAgencies, stationDepartures, type Agency, type Departure } from '@/data/queries';
@@ -14,6 +14,7 @@ import { t, type Key } from '@/i18n';
 import { athensNow, formatDate, lastKnownDay, type Now } from '@/lib/time';
 
 export function OffSeasonCard({ region, station, validFrom, validTo }: { region: string; station: number; validFrom: number; validTo: number }) {
+  const oldW = useTextWidth(56);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [old, setOld] = useState<{ day: Now; deps: Departure[] } | null>(null);
   const [showOld, setShowOld] = useState(false);
@@ -75,7 +76,7 @@ export function OffSeasonCard({ region, station, validFrom, validTo }: { region:
           ) : (
             old.deps.map((d) => (
               <View key={`${d.dayOffset}:${d.tripId}`} style={s.oldRow}>
-                <Txt w="black" size={17} color={C.muted} style={{ width: 56 }}>
+                <Txt w="black" size={17} color={C.muted} style={{ width: oldW }}>
                   {d.time}
                 </Txt>
                 <LineBadge label={d.shortName} color="#9AA5BC" agencyCode={d.agencyCode} mode={d.mode} small />

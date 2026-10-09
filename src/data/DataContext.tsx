@@ -56,6 +56,8 @@ type DataState = {
   installed: Record<string, Installed>;
   manifestError: boolean;
   busy: Record<string, boolean>;
+  /** Postęp pobierania rozkładów regionu 0…1 – tylko w trakcie pobierania. */
+  progress: Record<string, number>;
   refresh: () => Promise<void>;
   /** Pobiera rozkłady regionu; withMap – od razu także mapę offline (w tle). */
   install: (region: string, opts?: { withMap?: boolean }) => Promise<void>;
@@ -74,6 +76,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [installed, setInstalled] = useState<Record<string, Installed>>(() => listInstalled());
   const [manifestError, setManifestError] = useState(false);
   const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [progress, setProgress] = useState<Record<string, number>>({});
 
   const [refreshTick, setRefreshTick] = useState(0);
   const refresh = useCallback(async () => setRefreshTick((x) => x + 1), []);
@@ -109,8 +112,15 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const pkg = manifest?.packages.find((p) => p.region === region);
       if (!pkg || !manifest) return;
       setBusy((b) => ({ ...b, [region]: true }));
+      setProgress((x) => ({ ...x, [region]: 0 }));
+      let shown = 0;
       try {
-        await installPackage(pkg, manifest.schema);
+        await installPackage(pkg, manifest.schema, (part) => {
+          // Co najmniej 2 punkty procentowe – bez setState przy każdym kawałku pliku.
+          if (part - shown < 0.02 && part < 1) return;
+          shown = part;
+          setProgress((x) => ({ ...x, [region]: part }));
+        });
         fetchFares(region).catch(() => {});
         syncPlaces([region]).catch(() => {});
         const all = listInstalled();
@@ -124,6 +134,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
           .catch(() => {});
       } finally {
         setBusy((b) => ({ ...b, [region]: false }));
+        setProgress(({ [region]: _done, ...rest }) => rest);
       }
     },
     [manifest],
@@ -155,6 +166,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       installed,
       manifestError,
       busy,
+      progress,
       refresh,
       install,
       remove,
@@ -173,7 +185,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return !!pkg && !!installed[region] && installed[region].version !== pkg.version;
       },
     };
-  }, [manifest, groups, installed, manifestError, busy, refresh, install, remove]);
+  }, [manifest, groups, installed, manifestError, busy, progress, refresh, install, remove]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

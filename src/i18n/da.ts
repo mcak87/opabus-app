@@ -67,6 +67,7 @@ export const da: Record<keyof typeof pl, string> = {
   zoomOut: 'Zoom ud',
   mapOfflineGet: 'Offlinekort · ca. {size}',
   mapDownloading: 'Henter kort… {pct} % · {size}',
+  pkgDownloading: 'Henter køreplaner… {pct} % · {size}',
   mapReady: 'Offlinekort · {size}',
   mapError: 'Kortet kunne ikke hentes',
   mapDownload: 'Hent offlinekort',

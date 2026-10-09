@@ -67,6 +67,7 @@ export const he: Record<keyof typeof pl, string> = {
   zoomOut: 'הקטנת המפה',
   mapOfflineGet: 'מפה אופליין · כ-{size}',
   mapDownloading: 'הורדת המפה… {pct}% · {size}',
+  pkgDownloading: 'הורדת לוחות הזמנים… {pct}% · {size}',
   mapReady: 'מפה אופליין · {size}',
   mapError: 'הורדת המפה נכשלה',
   mapDownload: 'הורדת מפה אופליין',

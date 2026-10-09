@@ -38,6 +38,15 @@ expect('ulica z numerem', ateny, 'ermou 21', syntagma, (n) => n[0]?.toLowerCase(
 expect('ulica', ateny, 'ermou', syntagma, (n) => n.some((x) => /^ermou/i.test(x) && x.includes('[r]')));
 expect('muzeum', ateny, 'acropolis museum', syntagma, (n) => n.some((x) => /acropolis museum/i.test(x)));
 expect('szkoła', ateny, 'school', syntagma, (n) => n.length > 0);
+// Wyrazy pospolite po polsku (i w innych językach) → nazwy z OSM (SYNONYMS w placesSearch.ts).
+const medieval = (n: string[]) => n.some((x) => /medieval (city|town) of rhodes/i.test(x));
+expect('stare miasto', rodos, 'stare miasto', faliraki, medieval);
+expect('stare miasto – w trakcie pisania', rodos, 'stare mia', faliraki, medieval);
+expect('old town', rodos, 'old town', faliraki, medieval);
+expect('altstadt', rodos, 'Altstadt', faliraki, medieval);
+expect('lotnisko', rodos, 'lotnisko', faliraki, (n) => n.some((x) => /airport|aerolimen|aerodrom/i.test(x)));
+expect('plaża', rodos, 'plaża faliraki', faliraki, (n) => n.some((x) => /beach|paralia/i.test(x) && /faliraki/i.test(x)));
+expect('stare miasto – Ateny', ateny, 'stare miasto', syntagma, (n) => n.length > 0);
 
 console.log(fail ? `${fail} błędów` : 'Wszystko OK');
 process.exitCode = fail ? 1 : 0;

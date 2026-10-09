@@ -65,6 +65,7 @@ export const pl = {
   zoomOut: 'Oddal mapę',
   mapOfflineGet: 'Mapa offline · ok. {size}',
   mapDownloading: 'Pobieranie mapy… {pct}% · {size}',
+  pkgDownloading: 'Pobieranie rozkładów… {pct}% · {size}',
   mapReady: 'Mapa offline · {size}',
   mapError: 'Nie udało się pobrać mapy',
   mapDownload: 'Pobierz mapę offline',

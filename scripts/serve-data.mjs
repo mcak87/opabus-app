@@ -13,6 +13,8 @@ const DEFAULT_SITE = 'C:/Users/cizio/OneDrive/Desktop/Apliakcja Publiczny transp
 const SITE = resolve(process.argv[2] || process.env.OPABUS_SITE || DEFAULT_SITE);
 const ROOT = join(SITE, 'public');
 const PORT = Number(process.env.PORT || 8787);
+// Wolny internet na próbę (np. pasek postępu pobierania): OPABUS_SLOW=20 → pliki wysyłane z prędkością ok. 20 KB/s.
+const SLOW_KBPS = Number(process.env.OPABUS_SLOW || 0);
 
 // .gz wysyłamy jako zwykły plik binarny (bez Content-Encoding) – aplikacja sprawdza sha256 skompresowanego pliku.
 const TYPES = { '.json': 'application/json; charset=utf-8', '.gz': 'application/octet-stream' };
@@ -130,7 +132,15 @@ const server = createServer(async (req, res) => {
     'Content-Length': statSync(path).size,
     'Cache-Control': 'no-cache',
   });
-  createReadStream(path).pipe(res);
+  if (SLOW_KBPS > 0 && extname(path) === '.gz') {
+    const buf = readFileSync(path);
+    const step = Math.max(1, Math.round((SLOW_KBPS * 1024) / 10));
+    for (let i = 0; i < buf.length; i += step) {
+      res.write(buf.subarray(i, i + step));
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    res.end();
+  } else createReadStream(path).pipe(res);
   log('GET', url.pathname);
 });
 

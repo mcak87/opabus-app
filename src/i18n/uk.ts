@@ -67,6 +67,7 @@ export const uk: Record<keyof typeof pl, string> = {
   zoomOut: 'Віддалити карту',
   mapOfflineGet: 'Офлайн-карта · бл. {size}',
   mapDownloading: 'Завантаження карти… {pct}% · {size}',
+  pkgDownloading: 'Завантаження розкладів… {pct}% · {size}',
   mapReady: 'Офлайн-карта · {size}',
   mapError: 'Не вдалося завантажити карту',
   mapDownload: 'Завантажити офлайн-карту',

@@ -67,6 +67,7 @@ export const no: Record<keyof typeof pl, string> = {
   zoomOut: 'Zoom ut',
   mapOfflineGet: 'Offlinekart · ca. {size}',
   mapDownloading: 'Laster ned kart… {pct} % · {size}',
+  pkgDownloading: 'Laster ned rutetider… {pct} % · {size}',
   mapReady: 'Offlinekart · {size}',
   mapError: 'Kunne ikke laste ned kartet',
   mapDownload: 'Last ned offlinekart',

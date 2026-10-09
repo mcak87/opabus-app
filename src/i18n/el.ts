@@ -67,6 +67,7 @@ export const el: Record<keyof typeof pl, string> = {
   zoomOut: 'Σμίκρυνση',
   mapOfflineGet: 'Χάρτης offline · περίπου {size}',
   mapDownloading: 'Λήψη χάρτη… {pct}% · {size}',
+  pkgDownloading: 'Λήψη δρομολογίων… {pct}% · {size}',
   mapReady: 'Χάρτης offline · {size}',
   mapError: 'Η λήψη του χάρτη απέτυχε',
   mapDownload: 'Λήψη χάρτη offline',

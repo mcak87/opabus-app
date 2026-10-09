@@ -134,13 +134,19 @@ function toHex(buf: ArrayBuffer): string {
   return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/** Pobiera i instaluje paczkę regionu. Stara paczka zostaje, dopóki nowa nie jest sprawdzona. */
-export async function installPackage(pkg: PackageInfo, manifestSchema: number): Promise<Installed> {
+/**
+ * Pobiera i instaluje paczkę regionu. Stara paczka zostaje, dopóki nowa nie jest sprawdzona.
+ * onProgress – część pobrana 0…1 (rozmiar z manifestu, gdy serwer nie poda Content-Length).
+ */
+export async function installPackage(pkg: PackageInfo, manifestSchema: number, onProgress?: (part: number) => void): Promise<Installed> {
   if (manifestSchema > SUPPORTED_SCHEMA) throw new Error('Wymagana aktualizacja aplikacji');
   const tmpDir = new Directory(Paths.cache, 'opabus-download');
   tmpDir.create({ intermediates: true, idempotent: true });
   const gzFile = await File.downloadFileAsync(`${DATA_URL}/data/v1/offline/${pkg.file}`, new File(tmpDir, pkg.file), {
     idempotent: true,
+    onProgress: onProgress
+      ? ({ bytesWritten, totalBytes }) => onProgress(Math.min(1, bytesWritten / (totalBytes > 0 ? totalBytes : pkg.bytes || 1)))
+      : undefined,
   });
   try {
     const gz = await gzFile.bytes();

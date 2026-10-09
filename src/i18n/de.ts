@@ -67,6 +67,7 @@ export const de: Record<keyof typeof pl, string> = {
   zoomOut: 'Herauszoomen',
   mapOfflineGet: 'Offline-Karte · ca. {size}',
   mapDownloading: 'Lade Karte… {pct}% · {size}',
+  pkgDownloading: 'Lade Fahrpläne… {pct}% · {size}',
   mapReady: 'Offline-Karte · {size}',
   mapError: 'Karte konnte nicht geladen werden',
   mapDownload: 'Offline-Karte herunterladen',
