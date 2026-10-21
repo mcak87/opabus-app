@@ -453,4 +453,11 @@ export const de: Record<keyof typeof pl, string> = {
   offSeasonReadyBody: 'Gültig bis {date}. Lade ihn herunter, um die aktuellen Abfahrten zu sehen.',
   offSeasonUpdate: 'Neuen Fahrplan herunterladen',
   stopGone: 'Diese Haltestelle gibt es im neuen Fahrplan nicht. Geh zurück und wähle die Haltestelle noch einmal.',
+  stopUpdateLost: 'Der Fahrplan wurde gerade aktualisiert, und wir konnten diese Haltestelle in der neuen Version nicht finden. Geh zurück und wähle die Haltestelle noch einmal.',
+  loadingSlow: 'Das Laden dauert länger als sonst. Prüf deine Internetverbindung – im Hotel-WLAN musst du dich manchmal erst im Browser anmelden.',
+  crashTitle: 'Etwas ist schiefgelaufen',
+  crashBody: 'Dieser Bildschirm funktioniert nicht mehr. Wir haben gespeichert, was passiert ist – schick uns einen Bericht, dann beheben wir es schneller.',
+  errorReportTitle: 'Fehlerbericht senden',
+  errorReportSub: 'Funktioniert etwas nicht? Schick uns per E-Mail eine Liste der letzten Fehler – ohne persönliche Daten.',
+  errorReportIntro: 'Beschreib kurz, was passiert ist (optional):',
 };

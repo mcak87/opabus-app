@@ -1,6 +1,7 @@
 // Pliki cen regionów: pobierane z opabus.com razem z paczką rozkładów i trzymane w telefonie (działają offline).
 import Storage from 'expo-sqlite/kv-store';
 
+import { fetchTimeout } from '@/lib/fetchTimeout';
 import type { FareFile } from '@/planner/fares';
 
 import { DATA_URL } from './packages';
@@ -24,7 +25,7 @@ export function cachedFares(region: string): FareFile | null {
 
 /** Pobiera cennik regionu (404 = region bez cennika). Błąd sieci nie usuwa zapisanego cennika. */
 export async function fetchFares(region: string): Promise<FareFile | null> {
-  const res = await fetch(`${DATA_URL}/data/v1/ceny/${region}.json`, { headers: { 'Cache-Control': 'no-cache' } });
+  const res = await fetchTimeout(`${DATA_URL}/data/v1/ceny/${region}.json`, { headers: { 'Cache-Control': 'no-cache' } });
   if (res.status === 404) {
     Storage.setItemSync(key(region), JSON.stringify({ none: true }));
     memory.set(region, null);

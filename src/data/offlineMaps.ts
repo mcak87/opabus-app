@@ -4,6 +4,7 @@ import type { OfflinePack, OfflinePackStatus } from '@maplibre/maplibre-react-na
 import { useSyncExternalStore } from 'react';
 
 import { MAP_STYLE } from '@/constants/map';
+import { logError } from '@/lib/errorLog';
 import { IS_EXPO_GO } from '@/lib/runtime';
 
 export const MAPS_SUPPORTED = !IS_EXPO_GO;
@@ -76,7 +77,10 @@ function fromStatus(s: OfflinePackStatus): MapPackInfo {
 }
 
 const onProgress = (region: string) => (_pack: OfflinePack, status: OfflinePackStatus) => put(region, fromStatus(status));
-const onError = (region: string) => () => put(region, { ...(store[region] ?? { percent: 0, bytes: 0 }), state: 'error' });
+const onError = (region: string) => (_pack?: OfflinePack, err?: { message?: string }) => {
+  logError(`map ${region}`, err?.message ?? 'błąd pobierania mapy');
+  put(region, { ...(store[region] ?? { percent: 0, bytes: 0 }), state: 'error' });
+};
 
 /** Wczytuje zapisane mapy przy starcie; niedokończone pobieranie wznawia. */
 export async function loadMapPacks() {
@@ -112,8 +116,9 @@ export async function downloadMap(region: string, bbox: number[]) {
       onProgress(region),
       onError(region),
     );
-  } catch {
-    onError(region)();
+  } catch (e) {
+    logError(`map ${region}`, e);
+    put(region, { ...(store[region] ?? { percent: 0, bytes: 0 }), state: 'error' });
   }
 }
 

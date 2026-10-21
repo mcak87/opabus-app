@@ -7,6 +7,9 @@ import * as SQLite from 'expo-sqlite';
 import Storage from 'expo-sqlite/kv-store';
 import { gunzipSync } from 'fflate';
 
+import { logError } from '@/lib/errorLog';
+import { fetchTimeout } from '@/lib/fetchTimeout';
+
 import { loadCalendar, loadMeta, type Calendar, type Db, type RegionMeta } from './queries';
 
 /**
@@ -48,7 +51,7 @@ const K_REGIONS = 'data.regions.v1';
 const K_PKG = 'data.pkg.v1.';
 
 export async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${DATA_URL}${path}`, { headers: { 'Cache-Control': 'no-cache' } });
+  const res = await fetchTimeout(`${DATA_URL}${path}`, { headers: { 'Cache-Control': 'no-cache' } });
   if (!res.ok) throw new Error(`HTTP ${res.status} ${path}`);
   return (await res.json()) as T;
 }
@@ -60,9 +63,26 @@ export async function fetchManifest(): Promise<Manifest> {
   return m;
 }
 
+/**
+ * Zapis z pamięci telefonu. Uszkodzony wpis (np. przerwany zapis) kasujemy i traktujemy jak brak – inaczej błąd
+ * przy starcie blokowałby uruchomienie aplikacji za każdym razem. `valid` – minimalne sprawdzenie kształtu.
+ */
+function readStored<T>(key: string, valid: (v: unknown) => boolean): T | null {
+  const s = Storage.getItemSync(key);
+  if (!s) return null;
+  try {
+    const v = JSON.parse(s) as unknown;
+    if (valid(v)) return v as T;
+  } catch {
+    // niżej – jak nieprawidłowy kształt
+  }
+  logError(`storage ${key}`, new Error('Uszkodzony zapis – usunięty'));
+  Storage.removeItemSync(key);
+  return null;
+}
+
 export function cachedManifest(): Manifest | null {
-  const s = Storage.getItemSync(K_MANIFEST);
-  return s ? (JSON.parse(s) as Manifest) : null;
+  return readStored<Manifest>(K_MANIFEST, (v) => !!v && Array.isArray((v as Manifest).packages));
 }
 
 export async function fetchRegionGroups(): Promise<RegionGroup[]> {
@@ -72,21 +92,25 @@ export async function fetchRegionGroups(): Promise<RegionGroup[]> {
 }
 
 export function cachedRegionGroups(): RegionGroup[] | null {
-  const s = Storage.getItemSync(K_REGIONS);
-  return s ? (JSON.parse(s) as RegionGroup[]) : null;
+  return readStored<RegionGroup[]>(K_REGIONS, Array.isArray);
 }
+
+const isInstalled = (v: unknown) => !!v && typeof (v as Installed).region === 'string' && typeof (v as Installed).version === 'string';
 
 export function listInstalled(): Record<string, Installed> {
   const out: Record<string, Installed> = {};
   for (const k of Storage.getAllKeysSync()) {
     if (!k.startsWith(K_PKG)) continue;
-    const v = Storage.getItemSync(k);
-    if (v) {
-      const i = JSON.parse(v) as Installed;
-      out[i.region] = i;
-    }
+    // Uszkodzony wpis = region jak niepobrany (plik bazy zostaje, ponowne pobranie go nadpisze).
+    const i = readStored<Installed>(k, isInstalled);
+    if (i) out[i.region] = i;
   }
   return out;
+}
+
+/** Wersja paczki regionu w telefonie ('' – brak) – bez przeglądania wszystkich wpisów jak listInstalled(). */
+export function installedVersion(region: string): string {
+  return readStored<Installed>(K_PKG + region, isInstalled)?.version ?? '';
 }
 
 // ---------- Pliki bazy ----------

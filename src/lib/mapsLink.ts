@@ -1,5 +1,6 @@
 // Współrzędne z linku Google Maps (albo z wklejonych liczb) – do zgłoszeń poprawek położenia przystanków.
 // Czysty TypeScript (test: scripts/test-maps-link.ts).
+import { fetchTimeout } from './fetchTimeout.ts';
 
 export type Coords = { lat: number; lon: number };
 
@@ -41,7 +42,7 @@ export function isShortMapsLink(input: string): boolean {
 }
 
 /** Rozwija krótki link (przekierowania) i szuka współrzędnych w adresie docelowym, a w razie potrzeby w treści strony. */
-export async function resolveMapsLink(input: string, fetcher: typeof fetch = fetch): Promise<Coords | null> {
+export async function resolveMapsLink(input: string, fetcher: typeof fetch = fetchTimeout): Promise<Coords | null> {
   const direct = parseCoords(input);
   if (direct) return direct;
   const url = /^https?:\/\//i.test(input.trim()) ? input.trim() : `https://${input.trim()}`;
@@ -86,7 +87,7 @@ export function coordsFromHtml(body: string): Coords | null {
  * Punkt z wklejonego albo udostępnionego tekstu: współrzędne, link Google Maps (także krótki), Booking i inne strony
  * z mapą obiektu. null – nic nie znaleźliśmy (albo brak internetu przy linku, który trzeba otworzyć).
  */
-export async function resolveSharedText(text: string, fetcher: typeof fetch = fetch): Promise<Coords | null> {
+export async function resolveSharedText(text: string, fetcher: typeof fetch = fetchTimeout): Promise<Coords | null> {
   const direct = parseCoords(text);
   if (direct) return direct;
   const url = firstUrl(text) ?? (isShortMapsLink(text) ? text.trim() : null);

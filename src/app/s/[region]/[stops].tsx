@@ -10,6 +10,7 @@ import { useData } from '@/data/DataContext';
 import { DATA_URL, openRegion } from '@/data/packages';
 import { stationIdForStopCode } from '@/data/queries';
 import { t } from '@/i18n';
+import { fetchTimeout } from '@/lib/fetchTimeout';
 
 export default function QrLinkScreen() {
   const { region, stops, h, src } = useLocalSearchParams<{ region: string; stops: string; h?: string; src?: string }>();
@@ -19,7 +20,7 @@ export default function QrLinkScreen() {
   useEffect(() => {
     // Pierwsze uruchomienie po instalacji z kodu QR liczy się jako install_android (lib/installReferrer), nie app_open.
     if (src === 'install') return;
-    fetch(`${DATA_URL}/api/hit`, { method: 'POST', body: JSON.stringify({ e: 'app_open', h: h || '_' }) }).catch(() => {});
+    fetchTimeout(`${DATA_URL}/api/hit`, { method: 'POST', body: JSON.stringify({ e: 'app_open', h: h || '_' }) }).catch(() => {});
   }, [h, src]);
 
   const started = useRef(false);

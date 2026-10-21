@@ -20,7 +20,7 @@ export const openAddPhoto = (region: string, station: number) => router.push({ p
 export function StopPhotos({ region, station, stopCodes }: { region: string; station: number; stopCodes: string[] }) {
   useLang();
   const photos = useStationPhotos(region, station, stopCodes);
-  const pending = usePendingMine(region, station);
+  const pending = usePendingMine(region, station, stopCodes);
   const [open, setOpen] = useState<number | null>(null);
   if (!photos.length && !pending) return null;
   return (
@@ -58,9 +58,10 @@ export function StopPhotos({ region, station, stopCodes }: { region: string; sta
   );
 }
 
-/** Miniatura zdjęcia przystanku (karty na Start i na mapie) – null, gdy przystanek nie ma zdjęcia. */
-export function StopPhotoThumb({ region, station, size = 44 }: { region: string; station: number; size?: number }) {
-  const photos = useStationPhotos(region, station);
+/** Miniatura zdjęcia przystanku (np. przystanek wsiadania w planerze) – null, gdy przystanek nie ma zdjęcia.
+ *  `codes` – kody słupków z GTFS, gdy ekran je zna. */
+export function StopPhotoThumb({ region, station, codes, size = 44 }: { region: string; station: number; codes?: string[]; size?: number }) {
+  const photos = useStationPhotos(region, station, codes);
   if (!photos.length) return null;
   return <Image source={{ uri: photoUrl(photos[0].id) }} style={{ width: size, height: size, borderRadius: 14 }} contentFit="cover" cachePolicy="disk" accessibilityLabel={t('photoOpen')} />;
 }

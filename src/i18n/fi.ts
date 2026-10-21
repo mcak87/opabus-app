@@ -448,4 +448,11 @@ export const fi: Record<keyof typeof pl, string> = {
   offSeasonReadyBody: 'Voimassa {date} asti. Lataa se, niin näet ajantasaiset lähdöt.',
   offSeasonUpdate: 'Lataa uusi aikataulu',
   stopGone: 'Tätä pysäkkiä ei ole uudessa aikataulussa. Palaa takaisin ja valitse pysäkki uudelleen.',
+  stopUpdateLost: 'Aikataulu päivittyi juuri, emmekä löytäneet tätä pysäkkiä uudesta versiosta. Palaa takaisin ja valitse pysäkki uudelleen.',
+  loadingSlow: 'Lataaminen kestää tavallista kauemmin. Tarkista internetyhteys – hotellin wifissä täytyy joskus ensin kirjautua selaimen kautta.',
+  crashTitle: 'Jokin meni vikaan',
+  crashBody: 'Tämä näkymä lakkasi toimimasta. Tallensimme, mitä tapahtui – lähetä meille raportti, niin korjaamme vian nopeammin.',
+  errorReportTitle: 'Lähetä virheraportti',
+  errorReportSub: 'Eikö jokin toimi? Lähetä meille sähköpostilla luettelo viimeisimmistä virheistä – ilman henkilötietoja.',
+  errorReportIntro: 'Kerro lyhyesti, mitä tapahtui (vapaaehtoinen):',
 };

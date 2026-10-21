@@ -7,19 +7,33 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import Storage from 'expo-sqlite/kv-store';
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { APP_VERSION } from '@/data/appConfig';
 import { recordContribution } from '@/data/badges';
-import { DATA_URL, getJson } from '@/data/packages';
+import { useData } from '@/data/DataContext';
+import { DATA_URL, getJson, installedVersion, openRegion } from '@/data/packages';
+import { stationCodes } from '@/data/queries';
 import { getLang } from '@/i18n';
+import { fetchTimeout, UPLOAD_TIMEOUT_MS } from '@/lib/fetchTimeout';
 import { distanceM } from '@/lib/geo';
 
-export type StopPhoto = { id: string; station: number; stops: string[]; w: number; h: number; caption: string; created: string };
+/** `stops` – kody słupków z GTFS (stałe), `station` – numer stacji w paczce `version` (zmienia się przy przebudowie). */
+export type StopPhoto = { id: string; station: number; stops: string[]; version?: string; w: number; h: number; caption: string; created: string };
 type RegionPhotos = { fetched: number; photos: StopPhoto[] };
 /** Wysłane z tego telefonu i jeszcze niezatwierdzone („czeka na sprawdzenie”). `first` – przystanek nie miał jeszcze
  *  zdjęcia, gdy je wysyłano (odznaka „Odkrywca” po zatwierdzeniu). */
-type Mine = { id: string; region: string; station: number; created: string; first?: boolean };
+type Mine = { id: string; region: string; station: number; stops?: string[]; version?: string; created: string; first?: boolean };
+
+/**
+ * Czy zdjęcie (albo moje wysłane) jest z tego przystanku. Po kodach słupków z GTFS – są stałe między wersjami paczek.
+ * Numer stacji tylko wtedy, gdy zdjęcie wysłano przy tej samej wersji paczki, która jest w telefonie: po przebudowie
+ * paczki ten sam numer ma inny przystanek, więc zdjęcie przystanku A pokazałoby się przy B.
+ */
+function samePlace(p: { station: number; stops?: string[]; version?: string }, station: number, codes: string[], version: string): boolean {
+  if (p.stops?.some((c) => codes.includes(c))) return true;
+  return !!version && p.version === version && p.station === station;
+}
 
 const K_REGION = 'photos.v1.';
 const K_MINE = 'photos.mine.v1';
@@ -42,9 +56,9 @@ function readJson<T>(key: string, fallback: T): T {
 const cache = new Map<string, RegionPhotos>();
 let mine: Mine[] = readJson<Mine[]>(K_MINE, []);
 const listeners = new Set<() => void>();
-let version = 0;
+let tick = 0;
 const notify = () => {
-  version++;
+  tick++;
   listeners.forEach((l) => l());
 };
 const inflight = new Map<string, Promise<void>>();
@@ -67,7 +81,9 @@ export function refreshPhotos(region: string, force = false): Promise<void> {
   if (!p) {
     p = getJson<{ photos?: StopPhoto[] }>(`/api/stop-photos?region=${encodeURIComponent(region)}`)
       .then((r) => {
-        const photos = Array.isArray(r.photos) ? r.photos.filter((x) => x && typeof x.id === 'string' && Number.isInteger(x.station)) : [];
+        const photos = (Array.isArray(r.photos) ? r.photos : [])
+          .filter((x) => x && typeof x.id === 'string' && Number.isInteger(x.station))
+          .map((x) => ({ ...x, stops: Array.isArray(x.stops) ? x.stops.filter((c) => typeof c === 'string') : [] }));
         const next = { fetched: Date.now(), photos };
         cache.set(region, next);
         Storage.setItemSync(K_REGION + region, JSON.stringify(next));
@@ -93,24 +109,70 @@ function useVersion() {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    () => version,
+    () => tick,
   );
 }
 
-/** Zatwierdzone zdjęcia przystanku (stacji) – po numerze stacji albo kodzie słupka z GTFS (numery w paczkach się zmieniają). */
-export function useStationPhotos(region: string | undefined, station: number | undefined, stopCodes: string[] = []): StopPhoto[] {
+/** Kody słupków stacji w danej wersji paczki – dla kart, które znają tylko numer stacji (Start, mapa). */
+const codesCache = new Map<string, Promise<string[]>>();
+function codesOf(region: string, version: string, station: number): Promise<string[]> {
+  const key = `${region}:${version}:${station}`;
+  let p = codesCache.get(key);
+  if (!p) {
+    if (codesCache.size > 500) codesCache.clear();
+    p = openRegion(region).then(({ db }) => stationCodes(db, station));
+    p.catch(() => codesCache.delete(key));
+    codesCache.set(key, p);
+  }
+  return p;
+}
+
+/**
+ * Kody słupków przystanku: podane przez ekran (`known`) albo odczytane z paczki w telefonie po numerze stacji
+ * (tylko gdy region ma jakiekolwiek zdjęcia – inaczej nie ma czego dopasowywać).
+ */
+function useStopCodes(region: string | undefined, station: number | undefined, version: string, known: string[] | undefined, needed: boolean): string[] {
+  const key = `${region}:${version}:${station}`;
+  const [found, setFound] = useState<{ key: string; codes: string[] } | null>(null);
+  useEffect(() => {
+    if (known || !needed || !region || station === undefined || !version) return;
+    let alive = true;
+    codesOf(region, version, station)
+      .then((codes) => alive && setFound({ key, codes }))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [key, known, needed, region, station, version]);
+  return known ?? (found?.key === key ? found.codes : []);
+}
+
+/**
+ * Zatwierdzone zdjęcia przystanku (stacji) – po kodach słupków z GTFS (zob. samePlace). `stopCodes` – kody, gdy ekran
+ * je zna (ekran przystanku, ulubione, planer); bez nich odczytujemy je z paczki po numerze stacji.
+ */
+export function useStationPhotos(region: string | undefined, station: number | undefined, stopCodes?: string[]): StopPhoto[] {
+  // Dane z magazynu tego pliku (zmiany zgłasza useVersion) – kompilator Reacta nie może zapamiętać wyniku po samych argumentach.
+  'use no memo';
   useVersion();
+  // Wersja z DataContext – po aktualizacji rozkładu karta przelicza się sama, nawet gdy jej argumenty się nie zmieniły.
+  const installed = useData().installed;
   useEffect(() => {
     if (region) refreshPhotos(region);
   }, [region]);
+  const all = region ? regionPhotos(region).photos : [];
+  const version = (region && installed[region]?.version) || '';
+  const codes = useStopCodes(region, station, version, stopCodes, all.length > 0);
   if (!region || station === undefined) return [];
-  return regionPhotos(region).photos.filter((p) => p.station === station || p.stops.some((c) => stopCodes.includes(c)));
+  return all.filter((p) => samePlace(p, station, codes, version));
 }
 
 /** Czy z tego telefonu wysłano zdjęcie tego przystanku, które czeka na sprawdzenie. */
-export function usePendingMine(region: string, station: number): boolean {
+export function usePendingMine(region: string, station: number, stopCodes: string[]): boolean {
+  'use no memo';
   useVersion();
-  return mine.some((m) => m.region === region && m.station === station);
+  const version = useData().installed[region]?.version ?? '';
+  return mine.some((m) => m.region === region && samePlace(m, station, stopCodes, version));
 }
 
 export type Upload = {
@@ -129,7 +191,9 @@ export type Upload = {
 /** Zmniejsza zdjęcie (bez metadanych) i wysyła. ok – czeka na sprawdzenie; limited – za dużo wysyłek z tego adresu
  *  (serwer: 10 na minutę), spróbować za chwilę; error – brak internetu albo odrzucone. */
 export async function uploadPhoto(u: Upload): Promise<'ok' | 'limited' | 'error'> {
-  const first = !regionPhotos(u.region).photos.some((p) => p.station === u.station || p.stops.some((c) => u.stops.includes(c)));
+  // Wersja paczki, z której jest numer stacji – zapisana przy zdjęciu (numer bez niej po przebudowie paczki nic nie znaczy).
+  const version = installedVersion(u.region);
+  const first = !regionPhotos(u.region).photos.some((p) => samePlace(p, u.station, u.stops, version));
   const scale = Math.min(1, MAX_SIDE / Math.max(u.width, u.height));
   const ctx = ImageManipulator.manipulate(u.uri);
   if (scale < 1) ctx.resize({ width: Math.round(u.width * scale), height: Math.round(u.height * scale) });
@@ -145,31 +209,36 @@ export async function uploadPhoto(u: Upload): Promise<'ok' | 'limited' | 'error'
     near = null;
   }
   try {
-    const res = await fetch(`${DATA_URL}/api/stop-photo`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        region: u.region,
-        station: u.station,
-        stationName: u.stationName,
-        stops: u.stops,
-        lat: u.lat,
-        lon: u.lon,
-        w: out.width,
-        h: out.height,
-        caption: u.caption.trim(),
-        near,
-        consent: true,
-        app: APP_VERSION,
-        lang: getLang(),
-        image: out.base64,
-      }),
-    });
+    const res = await fetchTimeout(
+      `${DATA_URL}/api/stop-photo`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          region: u.region,
+          station: u.station,
+          version,
+          stationName: u.stationName,
+          stops: u.stops,
+          lat: u.lat,
+          lon: u.lon,
+          w: out.width,
+          h: out.height,
+          caption: u.caption.trim(),
+          near,
+          consent: true,
+          app: APP_VERSION,
+          lang: getLang(),
+          image: out.base64,
+        }),
+      },
+      UPLOAD_TIMEOUT_MS,
+    );
     if (res.status === 429) return 'limited';
     if (!res.ok) return 'error';
     const { id } = (await res.json()) as { id?: string };
     if (id) {
-      mine = [...mine, { id, region: u.region, station: u.station, created: new Date().toISOString(), first }].slice(-30);
+      mine = [...mine, { id, region: u.region, station: u.station, stops: u.stops, version, created: new Date().toISOString(), first }].slice(-30);
       Storage.setItemSync(K_MINE, JSON.stringify(mine));
       notify();
     }

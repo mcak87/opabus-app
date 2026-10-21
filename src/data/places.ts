@@ -5,6 +5,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import Storage from 'expo-sqlite/kv-store';
 import { gunzipSync, strFromU8 } from 'fflate';
 
+import { fetchTimeout } from '@/lib/fetchTimeout';
 import type { LatLon } from '@/lib/geo';
 
 import { DATA_URL } from './packages';
@@ -22,7 +23,7 @@ const fileOf = (region: string) => new File(dir(), `${region}.json.gz`);
 /** Pobiera brakujące albo nowsze pliki miejsc dla podanych regionów (bez internetu – zostaje to, co w telefonie). */
 export async function syncPlaces(regions: string[]): Promise<void> {
   if (!regions.length) return;
-  const res = await fetch(`${DATA_URL}/data/v1/miejsca/index.json`, { headers: { 'Cache-Control': 'no-cache' } });
+  const res = await fetchTimeout(`${DATA_URL}/data/v1/miejsca/index.json`, { headers: { 'Cache-Control': 'no-cache' } });
   if (!res.ok) return;
   const index = (await res.json()) as Index;
   const d = dir();

@@ -38,7 +38,8 @@ const MIN_ZOOM = 5;
 const MAX_ZOOM = 18;
 const GREECE: InitialViewState = { center: [23.7, 38.4], zoom: 5.6 };
 
-type Pin = Station & { region: string };
+/** `v` – wersje paczek w chwili wczytania (numery stacji zmieniają się przy każdej przebudowie paczki). */
+type Pin = Station & { region: string; v: string };
 const pinKey = (p: { region: string; id: number }) => `${p.region}:${p.id}`;
 
 export default function StopsMap() {
@@ -48,9 +49,18 @@ export default function StopsMap() {
   const query = useRef(0);
   const [initial, setInitial] = useState<InitialViewState | null>(null);
   const [hasLoc, setHasLoc] = useState(false);
-  const [pins, setPins] = useState<Pin[]>([]);
+  const [loadedPins, setPins] = useState<Pin[]>([]);
   const [zoomedOut, setZoomedOut] = useState(false);
-  const [selected, setSelected] = useState<Pin | null>(null);
+  const [picked, setSelected] = useState<Pin | null>(null);
+  // Nowa wersja paczki = nowe numery stacji: punkty i karta sprzed niej znikają (dotknięcie pokazałoby inny przystanek),
+  // a punkty z ostatniego widoku wczytują się od nowa (efekt pod loadPins).
+  const versions = Object.values(data.installed)
+    .map((i) => `${i.region}:${i.version}`)
+    .join();
+  const pins = loadedPins.filter((p) => p.v === versions);
+  const selected = picked?.v === versions ? picked : null;
+  /** Ostatni widok mapy – do ponownego wczytania punktów po aktualizacji rozkładu. */
+  const view = useRef<{ zoom: number; bounds: number[] } | null>(null);
   const [deps, setDeps] = useState<Departure[] | null>(null);
   const [nowSec, setNowSec] = useState(0);
 
@@ -84,13 +94,18 @@ export default function StopsMap() {
   // Przystanki w widocznym obszarze – po każdym przesunięciu mapy.
   const onRegionDidChange = (e: NativeSyntheticEvent<ViewStateChangeEvent>) => {
     const { zoom, bounds } = e.nativeEvent;
-    const id = ++query.current;
+    view.current = { zoom, bounds };
     if (zoom < MIN_ZOOM_STOPS) {
+      ++query.current;
       setZoomedOut(true);
       setPins([]);
       return;
     }
     setZoomedOut(false);
+    loadPins(bounds);
+  };
+  const loadPins = (bounds: number[]) => {
+    const id = ++query.current;
     const [west, south, east, north] = bounds;
     const regions = (data.manifest?.packages ?? [])
       .filter((p) => data.installed[p.region] && p.bbox[0] <= north && p.bbox[2] >= south && p.bbox[1] <= east && p.bbox[3] >= west)
@@ -98,12 +113,18 @@ export default function StopsMap() {
     Promise.all(
       regions.map(async (region) => {
         const { db } = await openRegion(region);
-        return (await stationsInBox(db, south, west, north, east)).map((s) => ({ ...s, region }));
+        return (await stationsInBox(db, south, west, north, east)).map((s) => ({ ...s, region, v: versions }));
       }),
     )
       .then((lists) => query.current === id && setPins(lists.flat()))
       .catch(() => {});
   };
+
+  useEffect(() => {
+    const v = view.current;
+    if (v && v.zoom >= MIN_ZOOM_STOPS) loadPins(v.bounds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tylko przy zmianie wersji paczek (przesunięcie mapy wczytuje samo)
+  }, [versions]);
 
   const onPress = async (e: NativeSyntheticEvent<PressEvent> | NativeSyntheticEvent<PressEventWithFeatures>) => {
     const [x, y] = e.nativeEvent.point;

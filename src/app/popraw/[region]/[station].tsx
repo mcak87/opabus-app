@@ -16,6 +16,7 @@ import { stationNames } from '@/data/nearby';
 import { DATA_URL, openRegion } from '@/data/packages';
 import { stationById, stationStops, type Station, type StationStop } from '@/data/queries';
 import { arrow, getLang, t, useLang, type Key } from '@/i18n';
+import { fetchTimeout } from '@/lib/fetchTimeout';
 import { distanceM } from '@/lib/geo';
 import { isShortMapsLink, parseCoords, resolveMapsLink } from '@/lib/mapsLink';
 import { takePickedPoint } from '@/lib/pickedPoint';
@@ -119,7 +120,7 @@ export default function FixStopScreen() {
     setBusy('send');
     setError(null);
     try {
-      const res = await fetch(`${DATA_URL}/api/stop-fix`, {
+      const res = await fetchTimeout(`${DATA_URL}/api/stop-fix`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

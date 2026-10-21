@@ -58,6 +58,7 @@ export function FavoritesSection({ tick }: { tick: number }) {
             key={key}
             region={f.region}
             station={f.station}
+            codes={f.codes.length ? f.codes : undefined}
             title={n.main}
             sub={[n.sub, data.regionName(f.region)].filter(Boolean).join(' · ')}
             icon="star"
@@ -78,6 +79,8 @@ const isAirport = (st: Station) => /airport|lotnisk|αεροδρ|αερολιμ/
 export function PopularSection({ region }: { region: string }) {
   const data = useData();
   const [list, setList] = useState<{ region: string; items: Station[] } | null>(null);
+  // Nowa wersja paczki = nowe numery stacji – lista od nowa, inaczej dotknięcie otworzyłoby inny przystanek.
+  const version = data.installed[region]?.version;
 
   useEffect(() => {
     let alive = true;
@@ -87,7 +90,7 @@ export function PopularSection({ region }: { region: string }) {
     return () => {
       alive = false;
     };
-  }, [region]);
+  }, [region, version]);
 
   const items = list?.region === region ? list.items : [];
   if (items.length === 0) return null;

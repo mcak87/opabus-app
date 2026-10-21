@@ -448,4 +448,11 @@ export const da: Record<keyof typeof pl, string> = {
   offSeasonReadyBody: 'Gælder til {date}. Hent den for at se aktuelle afgange.',
   offSeasonUpdate: 'Hent ny køreplan',
   stopGone: 'Dette stoppested findes ikke i den nye køreplan. Gå tilbage, og vælg stoppestedet igen.',
+  stopUpdateLost: 'Køreplanen er lige blevet opdateret, og vi kunne ikke finde dette stoppested i den nye version. Gå tilbage, og vælg stoppestedet igen.',
+  loadingSlow: 'Det tager længere tid end normalt at indlæse. Tjek internetforbindelsen – på hotellets wi-fi skal du nogle gange først logge ind via browseren.',
+  crashTitle: 'Noget gik galt',
+  crashBody: 'Denne skærm holdt op med at virke. Vi har gemt, hvad der skete – send os en rapport, så retter vi det hurtigere.',
+  errorReportTitle: 'Send fejlrapport',
+  errorReportSub: 'Virker noget ikke? Send os en liste over de seneste fejl på e-mail – uden personoplysninger.',
+  errorReportIntro: 'Beskriv kort, hvad der skete (valgfrit):',
 };

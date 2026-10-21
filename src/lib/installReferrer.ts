@@ -7,6 +7,7 @@ import Storage from 'expo-sqlite/kv-store';
 import { Platform } from 'react-native';
 
 import { DATA_URL } from '@/data/packages';
+import { fetchTimeout } from '@/lib/fetchTimeout';
 import { referrerTarget } from '@/lib/referrer';
 import { IS_EXPO_GO } from '@/lib/runtime';
 
@@ -19,7 +20,7 @@ async function sendPendingHit() {
   const h = Storage.getItemSync(K_PENDING);
   if (!h) return;
   try {
-    const res = await fetch(`${DATA_URL}/api/hit`, { method: 'POST', body: JSON.stringify({ e: 'install_android', h }) });
+    const res = await fetchTimeout(`${DATA_URL}/api/hit`, { method: 'POST', body: JSON.stringify({ e: 'install_android', h }) });
     if (res.ok || res.status === 400) Storage.removeItemSync(K_PENDING);
   } catch {
     // bez internetu – spróbujemy przy kolejnym uruchomieniu

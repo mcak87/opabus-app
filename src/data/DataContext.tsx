@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppState } from 'react-native';
 
 import { getLang } from '@/i18n';
+import { logError } from '@/lib/errorLog';
 import { bboxArea, inBbox, type LatLon } from '@/lib/geo';
 import { onUnmeteredNetwork } from '@/lib/network';
 import { getSettings, replaceFavorites, setHomeRegion } from '@/lib/settings';
@@ -79,8 +80,9 @@ async function syncFavorites(region?: string): Promise<void> {
     try {
       const { db } = await openRegion(f.region);
       fixed.set(favoriteKey(f), await refreshFavorite(db, f, installed[f.region].version));
-    } catch {
+    } catch (e) {
       // baza regionu się nie otworzyła – spróbujemy przy następnym starcie
+      logError(`favorites ${f.region}`, e);
     }
   }
   replaceFavorites(fixed);
@@ -148,12 +150,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       // Pierwszy pobrany region staje się „domowym” dla ekranu Start bez lokalizacji.
       const home = getSettings().homeRegion;
       if (!OVERLAY_REGIONS.has(region) && (!home || !all[home])) setHomeRegion(region);
-      if (opts?.withMap && !OVERLAY_REGIONS.has(region)) downloadMap(region, pkg.bbox).catch(() => {});
+      if (opts?.withMap && !OVERLAY_REGIONS.has(region)) downloadMap(region, pkg.bbox).catch((e) => logError(`map ${region}`, e));
       autoInstallOverlays(m)
         .then((added) => added && setInstalled(listInstalled()))
-        .catch(() => {});
+        .catch((e) => logError('overlays', e));
     } catch (e) {
       setFailed((x) => ({ ...x, [region]: e instanceof InstallError ? e.reason : 'network' }));
+      logError(`install ${region}`, e);
       throw e;
     } finally {
       setBusy((b) => ({ ...b, [region]: false }));
@@ -195,7 +198,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     refreshNews().catch(() => {});
     // Zgłoszenia „czy autobus był o czasie”, które nie wyszły bez internetu.
     flushReports().catch(() => {});
-    Promise.all([fetchManifest(), fetchRegionGroups().catch(() => null)])
+    Promise.all([
+      fetchManifest(),
+      fetchRegionGroups().catch((e) => {
+        logError('regions', e);
+        return null;
+      }),
+    ])
       .then(([m, g]) => {
         if (!alive) return;
         lastCheck.current = Date.now();
@@ -207,11 +216,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
         syncPlaces(Object.keys(listInstalled())).catch(() => {});
         autoInstallOverlays(m)
           .then((added) => added && alive && setInstalled(listInstalled()))
-          .catch(() => {})
+          .catch((e) => logError('overlays', e))
           .then(() => autoUpdate(m))
-          .catch(() => {});
+          .catch((e) => logError('autoUpdate', e));
       })
-      .catch(() => alive && setManifestError(true));
+      .catch((e) => {
+        logError('manifest', e);
+        if (alive) setManifestError(true);
+      });
     return () => {
       alive = false;
     };
@@ -236,9 +248,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Mapy offline zapisane w telefonie (i wznowienie przerwanego pobierania).
-    loadMapPacks().catch(() => {});
+    loadMapPacks().catch((e) => logError('map load', e));
     // Ulubione zapisane przez starszą wersję aplikacji (sam numer stacji) albo sprzed przerwanej aktualizacji.
-    syncFavorites().catch(() => {});
+    syncFavorites().catch((e) => logError('favorites', e));
   }, []);
 
   const remove = useCallback(async (region: string) => {

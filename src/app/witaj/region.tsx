@@ -1,6 +1,6 @@
 // Powitanie, krok 3: wykryty region (projekt: canvas „Region”) albo wybór z listy.
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,6 +16,8 @@ import { getLang, t, useLang } from '@/i18n';
 import { setHomeRegion, setOnboarded } from '@/lib/settings';
 import { formatDate } from '@/lib/time';
 
+const SLOW_MS = 6000;
+
 export default function RegionStep() {
   useLang();
   const insets = useSafeAreaInsets();
@@ -25,6 +27,14 @@ export default function RegionStep() {
   const [error, setError] = useState(false);
   const [withMap, setWithMap] = useState(MAPS_SUPPORTED);
   const mapPacks = useMapPacks();
+  /** Lista regionów wczytuje się dłużej niż SLOW_MS (np. hotelowe Wi-Fi z logowaniem) – „Spróbuj ponownie” i „Pomiń”. */
+  const [slow, setSlow] = useState(false);
+  const waiting = !data.manifest && !data.manifestError;
+  useEffect(() => {
+    if (!waiting) return;
+    const id = setTimeout(() => setSlow(true), SLOW_MS);
+    return () => clearTimeout(id);
+  }, [waiting]);
 
   const p = params.lat && params.lon ? { lat: Number(params.lat), lon: Number(params.lon) } : null;
   const detected = p ? data.regionsAt(p)[0] : undefined;
@@ -69,7 +79,19 @@ export default function RegionStep() {
             <Button title={t('skip')} kind="text" onPress={() => setOnboarded()} />
           </View>
         ) : (
-          <ActivityIndicator color={C.blue} size="large" />
+          <View style={{ gap: 16, marginHorizontal: 24 }}>
+            <ActivityIndicator color={C.blue} size="large" />
+            {/* Połączenie i tak skończy się po limicie czasu (komunikat wyżej) – wcześniej dajemy wybór. */}
+            {slow ? (
+              <View style={[s.card, { padding: 18, gap: 12 }]}>
+                <Txt w="bold" size={16} color={C.text2}>
+                  {t('loadingSlow')}
+                </Txt>
+                <Button title={t('retry')} icon="refresh" onPress={data.refresh} />
+                <Button title={t('skip')} kind="text" onPress={() => setOnboarded()} />
+              </View>
+            ) : null}
+          </View>
         )}
       </View>
     );

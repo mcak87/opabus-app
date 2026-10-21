@@ -453,4 +453,11 @@ export const it: Record<keyof typeof pl, string> = {
   offSeasonReadyBody: 'Valido fino al {date}. Scaricalo per vedere le partenze aggiornate.',
   offSeasonUpdate: 'Scarica il nuovo orario',
   stopGone: 'Questa fermata non c’è nel nuovo orario. Torna indietro e scegli di nuovo la fermata.',
+  stopUpdateLost: 'L’orario è appena stato aggiornato e non abbiamo trovato questa fermata nella nuova versione. Torna indietro e scegli di nuovo la fermata.',
+  loadingSlow: 'Il caricamento richiede più tempo del solito. Controlla la connessione: con il Wi-Fi dell’hotel a volte bisogna prima accedere dal browser.',
+  crashTitle: 'Qualcosa è andato storto',
+  crashBody: 'Questa schermata ha smesso di funzionare. Abbiamo salvato cosa è successo: inviaci un rapporto e lo sistemeremo prima.',
+  errorReportTitle: 'Invia rapporto errori',
+  errorReportSub: 'Qualcosa non funziona? Inviaci via email l’elenco degli ultimi errori, senza dati personali.',
+  errorReportIntro: 'Descrivi brevemente cosa è successo (facoltativo):',
 };

@@ -451,4 +451,11 @@ export const pl = {
   offSeasonReadyBody: 'Obowiązuje do {date}. Pobierz go, żeby zobaczyć aktualne odjazdy.',
   offSeasonUpdate: 'Pobierz nowy rozkład',
   stopGone: 'Tego przystanku nie ma w nowym rozkładzie. Wróć i wybierz przystanek jeszcze raz.',
+  stopUpdateLost: 'Rozkład właśnie się zaktualizował i nie udało się odnaleźć tego przystanku w nowej wersji. Wróć i wybierz przystanek jeszcze raz.',
+  loadingSlow: 'Wczytywanie trwa dłużej niż zwykle. Sprawdź internet – na hotelowym Wi-Fi czasem trzeba się najpierw zalogować w przeglądarce.',
+  crashTitle: 'Coś poszło nie tak',
+  crashBody: 'Ten ekran przestał działać. Zapisaliśmy, co się stało – wyślij nam raport, a szybciej to naprawimy.',
+  errorReportTitle: 'Wyślij raport błędów',
+  errorReportSub: 'Coś nie działa? Wyślij mailem listę ostatnich błędów – bez danych osobowych.',
+  errorReportIntro: 'Opisz krótko, co się stało (nieobowiązkowo):',
 };

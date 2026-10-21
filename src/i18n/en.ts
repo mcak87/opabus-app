@@ -447,4 +447,11 @@ export const en: Record<keyof typeof pl, string> = {
   offSeasonReadyBody: 'Valid until {date}. Download it to see current departures.',
   offSeasonUpdate: 'Download the new timetable',
   stopGone: 'This stop isn’t in the new timetable. Go back and choose the stop again.',
+  stopUpdateLost: 'The timetable has just been updated and we couldn’t find this stop in the new version. Go back and choose the stop again.',
+  loadingSlow: 'Loading is taking longer than usual. Check your internet – on hotel Wi-Fi you sometimes need to log in through the browser first.',
+  crashTitle: 'Something went wrong',
+  crashBody: 'This screen stopped working. We’ve saved what happened – send us a report and we’ll fix it faster.',
+  errorReportTitle: 'Send error report',
+  errorReportSub: 'Something not working? Email us a list of recent errors – no personal data.',
+  errorReportIntro: 'Briefly describe what happened (optional):',
 };

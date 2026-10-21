@@ -1,6 +1,6 @@
 // Odjazdy ze stacji (przystanek = stacja: słupki po obu stronach ulicy i perony razem).
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
@@ -8,11 +8,11 @@ import { LodgingReturn } from '@/components/LodgingReturn';
 import { OffSeasonCard } from '@/components/OffSeason';
 import { ScreenHeader } from '@/components/ScreenHeader';
 import { openAddPhoto, StopPhotos } from '@/components/StopPhotos';
-import { LineBadge, Txt, useTextWidth } from '@/components/ui';
+import { Button, LineBadge, Txt, useTextWidth } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
 import { minutesTo, stationNames } from '@/data/nearby';
-import { listInstalled, openRegion } from '@/data/packages';
+import { installedVersion, openRegion } from '@/data/packages';
 import {
   lastDeparturesToday,
   resolveStation,
@@ -24,6 +24,7 @@ import {
   type Station,
 } from '@/data/queries';
 import { t, useLang } from '@/i18n';
+import { logError } from '@/lib/errorLog';
 import { distanceM } from '@/lib/geo';
 import { isFavorite, setLodging, toggleFavorite, useSettings } from '@/lib/settings';
 import { athensEpoch, athensNow, formatDate, type Now } from '@/lib/time';
@@ -43,36 +44,58 @@ export default function StopScreen() {
   const [approx, setApprox] = useState(false);
   /** Kody słupków z GTFS – zdjęcia przystanku są przypięte także do nich (numery stacji w paczkach się zmieniają). */
   const [codes, setCodes] = useState<string[]>([]);
+  /** Wersja paczki, z której są wczytany przystanek i odjazdy (numery stacji i kursów). */
+  const [loadedVersion, setLoadedVersion] = useState('');
   /** Po aktualizacji rozkładu tego przystanku już nie ma. */
   const [gone, setGone] = useState(false);
+  /** Szukanie tego przystanku w nowej wersji rozkładu się nie udało (błąd bazy) – można spróbować ponownie. */
+  const [updateFailed, setUpdateFailed] = useState(false);
+  const [retryTick, setRetryTick] = useState(0);
   const { favorites, lodging } = useSettings();
   const data = useData();
+  const navigation = useNavigation<{ setParams: (params: { station: string }) => void }>();
   const version = data.installed[region]?.version ?? '';
-  /** Wersja paczki, z której jest numer stacji w adresie ekranu. */
-  const shownVersion = useRef(version);
+  /**
+   * Numer stacji razem z wersją paczki, z której pochodzi – numery zmieniają się przy każdej przebudowie paczki.
+   * Zmienia go tylko efekt niżej, po znalezieniu tego samego przystanku w nowej wersji.
+   */
+  const [shown, setShown] = useState(() => ({ id: Number(station), version }));
+  // Inny numer w adresie tego samego ekranu (nie nasz z efektu niżej) – numer z paczki, która jest teraz w telefonie.
+  const [param, setParam] = useState(station);
+  if (station !== param) {
+    setParam(station);
+    if (Number(station) !== shown.id) setShown({ id: Number(station), version: installedVersion(region) });
+  }
+  const id = shown.id;
+  // Komunikat zamiast odjazdów innego przystanku: szukanie się nie udało albo nowa wersja przyszła, zanim przystanek
+  // się wczytał (nie wiemy, czego szukać, a stary numer w nowej paczce może być innym przystankiem).
+  const lost = updateFailed || (!!version && shown.version !== version && !st);
 
   const load = useCallback(async () => {
     // Nowa paczka już w telefonie, a numer jeszcze stary – czekamy, aż efekt niżej znajdzie ten sam przystanek.
-    if (gone || listInstalled()[region]?.version !== shownVersion.current) return;
+    if (gone || lost || installedVersion(region) !== shown.version) return;
     try {
       const { db, cal, meta: m } = await openRegion(region);
-      const id = Number(station);
       const n = athensNow();
+      const [row, posts] = await Promise.all([stationById(db, shown.id), stationStops(db, shown.id)]);
+      const list = await stationDepartures(db, cal, shown.id, n, n.sec - 60, n.sec + span);
+      const lastToday = await lastDeparturesToday(db, cal, shown.id, n);
+      // Paczka podmieniła się w trakcie wczytywania – wynik mógł przyjść z nowej bazy dla starego numeru.
+      if (installedVersion(region) !== shown.version) return;
       setNow(n);
       setMeta(m);
-      const [row, posts] = await Promise.all([stationById(db, id), stationStops(db, id)]);
       // Kody przed przystankiem – gwiazdka (widoczna, gdy jest przystanek) zapisuje ulubiony razem z kodami.
       setApprox(posts.some((x) => x.verify));
       setCodes(posts.map((x) => x.code).filter(Boolean));
       setSt(row);
-      const list = await stationDepartures(db, cal, id, n, n.sec - 60, n.sec + span);
+      setLoadedVersion(shown.version);
       setDeps(list.filter((d) => d.dep >= n.sec - 30));
-      setLast((await lastDeparturesToday(db, cal, id, n)).filter((d) => d.dep >= n.sec - 30));
+      setLast(lastToday.filter((d) => d.dep >= n.sec - 30));
       setError(false);
     } catch {
       setError(true);
     }
-  }, [region, station, span, gone]);
+  }, [region, shown, span, gone, lost]);
 
   useFocusEffect(
     useCallback(() => {
@@ -82,36 +105,47 @@ export default function StopScreen() {
     }, [load]),
   );
 
-  // Nowa wersja rozkładu w trakcie oglądania (np. pobrana sama po powrocie do aplikacji): numer stacji mógł się zmienić,
-  // więc ten sam przystanek szukamy po kodach słupków – inaczej ekran pokazałby odjazdy innego przystanku.
+  // Nowa wersja rozkładu w trakcie oglądania (np. pobrana sama po powrocie do aplikacji, także gdy nad przystankiem jest
+  // otwarty kurs): numer stacji mógł się zmienić, więc ten sam przystanek szukamy po kodach słupków – inaczej po powrocie
+  // ekran pokazałby odjazdy innego przystanku. Nowy numer zapisujemy tylko w tym ekranie (useNavigation), a nie przez
+  // router.setParams – ten zmienia adres ekranu na wierzchu, czyli np. kursu.
   useEffect(() => {
-    if (!version || shownVersion.current === version) return;
-    const accept = () => {
-      shownVersion.current = version;
-    };
-    const ref = st ? { codes, name: st.name, name_en: st.name_en, lat: st.lat, lon: st.lon } : null;
+    if (!version || shown.version === version || !st) return;
+    let alive = true;
+    const ref = { codes, name: st.name, name_en: st.name_en, lat: st.lat, lon: st.lon };
     openRegion(region)
-      // Przystanek jeszcze się nie wczytał – nie ma czego szukać, zwykłe wczytanie (undefined).
-      .then(({ db }) => (ref ? resolveStation(db, ref) : undefined))
+      .then(({ db }) => resolveStation(db, ref))
       .then((found) => {
-        accept();
+        if (!alive) return;
+        // Nowa wersja przyjęta dopiero teraz: z numerem znalezionego przystanku albo z pewnością, że go nie ma.
         if (found === null) setGone(true);
-        else if (found && found.id !== Number(station)) router.setParams({ station: String(found.id) });
-        else load();
+        else if (found.id !== shown.id) navigation.setParams({ station: String(found.id) });
+        setShown({ id: found?.id ?? shown.id, version });
+        setUpdateFailed(false);
       })
-      .catch(accept);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- tylko przy zmianie wersji paczki; przystanek z ostatniego wczytania
-  }, [version]);
+      .catch((e) => {
+        if (!alive) return;
+        logError(`stop update ${region}`, e);
+        setUpdateFailed(true);
+      });
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- przy zmianie wersji paczki (i „Spróbuj ponownie”); przystanek z ostatniego wczytania
+  }, [version, retryTick]);
 
   const names = st ? stationNames(st) : null;
   const expired = meta && meta.validTo > 0 && meta.validTo < now.date;
-  const fav = isFavorite(favorites, region, Number(station), version);
-  const openFix = () => router.push({ pathname: '/popraw/[region]/[station]', params: { region, station: String(station) } });
+  const fav = isFavorite(favorites, region, id, version);
+  // Przez chwilę po aktualizacji rozkładu na ekranie są jeszcze dane ze starej paczki (numery stacji i kursów nie pasują
+  // do nowej bazy) – gwiazdka, kursy, zdjęcie i poprawka położenia działają dopiero po wczytaniu z nowej wersji.
+  const fresh = () => !!st && !!version && loadedVersion === version && installedVersion(region) === version;
+  const openFix = () => fresh() && router.push({ pathname: '/popraw/[region]/[station]', params: { region, station: String(id) } });
   const isLodgingStop = !!st && !!lodging && lodging.region === region && distanceM(st.lat, st.lon, lodging.lat, lodging.lon) < 150;
   const timeW = useTextWidth(64);
   const lastW = useTextWidth(56);
 
-  const star = st && version && !gone ? (
+  const star = st && fresh() && !gone && !lost ? (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={fav ? t('favRemove') : t('favAdd')}
@@ -125,11 +159,13 @@ export default function StopScreen() {
   return (
     <View style={s.screen}>
       <ScreenHeader region={region} kicker={t('departuresTitle')} title={names?.main ?? '…'} sub={names?.sub} right={star} />
-      {gone ? (
+      {gone || lost ? (
         <View style={s.body}>
           <Txt w="bold" color={C.text2}>
-            {t('stopGone')}
+            {t(gone ? 'stopGone' : 'stopUpdateLost')}
           </Txt>
+          {/* Błąd przy szukaniu przystanku w nowej paczce (np. baza jeszcze zajęta) – można spróbować jeszcze raz. */}
+          {updateFailed && st ? <Button title={t('retry')} kind="outline" icon="refresh" onPress={() => setRetryTick((x) => x + 1)} /> : null}
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.body}>
@@ -138,7 +174,7 @@ export default function StopScreen() {
             <View style={s.actions}>
               {/* Poza sezonem karta niżej prosi już o zdjęcie (rozkładu na przystanku) – bez drugiej prośby. */}
               {!expired ? (
-                <Pressable accessibilityRole="button" onPress={() => openAddPhoto(region, st.id)} style={s.action}>
+                <Pressable accessibilityRole="button" onPress={() => fresh() && openAddPhoto(region, st.id)} style={s.action}>
                   <Icon name="camera" size={20} color={C.blue} stroke={2.2} />
                   <Txt w="bold" size={13} color={C.ink} numberOfLines={2} style={s.actionText}>
                     {t('photoAdd')}
@@ -163,10 +199,10 @@ export default function StopScreen() {
             </Txt>
           ) : null}
           {/* Rozkład wygasł, nowego jeszcze nie ma – „Poza sezonem” zamiast pustej listy odjazdów. */}
-          {meta && expired ? <OffSeasonCard region={region} station={Number(station)} validFrom={meta.validFrom} validTo={meta.validTo} /> : null}
+          {meta && expired ? <OffSeasonCard region={region} station={id} validFrom={meta.validFrom} validTo={meta.validTo} /> : null}
 
           {/* Zdjęcia przystanku od użytkowników – pomagają go znaleźć (decyzja Michała 05.10.2026). */}
-          <StopPhotos region={region} station={Number(station)} stopCodes={codes} />
+          <StopPhotos region={region} station={id} stopCodes={codes} />
 
           {st && !expired ? (
             <LodgingReturn
@@ -188,9 +224,10 @@ export default function StopScreen() {
                 key={`${d.dayOffset}:${d.tripId}`}
                 accessibilityRole="button"
                 onPress={() =>
+                  fresh() &&
                   router.push({
                     pathname: '/trip/[region]/[trip]',
-                    params: { region, trip: String(d.tripId), from: String(station), dep: String(athensEpoch(now, d.dep)) },
+                    params: { region, trip: String(d.tripId), from: String(id), dep: String(athensEpoch(now, d.dep)) },
                   })
                 }
                 style={({ pressed }) => [s.row, pressed && { opacity: 0.8 }]}>

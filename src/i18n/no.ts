@@ -448,4 +448,11 @@ export const no: Record<keyof typeof pl, string> = {
   offSeasonReadyBody: 'Gjelder til {date}. Last den ned for å se oppdaterte avganger.',
   offSeasonUpdate: 'Last ned ny rutetabell',
   stopGone: 'Dette stoppestedet finnes ikke i den nye rutetabellen. Gå tilbake og velg stoppested på nytt.',
+  stopUpdateLost: 'Rutetabellen ble nettopp oppdatert, og vi fant ikke dette stoppestedet i den nye versjonen. Gå tilbake og velg stoppested på nytt.',
+  loadingSlow: 'Det tar lengre tid enn vanlig å laste inn. Sjekk internettforbindelsen – på hotellets wifi må du noen ganger logge inn via nettleseren først.',
+  crashTitle: 'Noe gikk galt',
+  crashBody: 'Denne skjermen sluttet å virke. Vi har lagret hva som skjedde – send oss en rapport, så fikser vi det raskere.',
+  errorReportTitle: 'Send feilrapport',
+  errorReportSub: 'Er det noe som ikke virker? Send oss en liste over de siste feilene på e-post – uten personopplysninger.',
+  errorReportIntro: 'Beskriv kort hva som skjedde (valgfritt):',
 };

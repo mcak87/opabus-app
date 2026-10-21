@@ -107,6 +107,10 @@ export default function TripDetails() {
 
 const mins = (l: WalkLeg) => Math.max(1, Math.round(l.sec / 60));
 
+/** Kody słupków z GTFS całej stacji przystanku `stop` – zdjęcia przystanków są przypięte do nich, nie do numeru stacji. */
+const stationCodesOf = (net: Net, stop: number) =>
+  (net.stationStops.get(net.stops[stop].station) ?? [stop]).map((i) => net.stops[i].code).filter(Boolean);
+
 const LEAVE_BEFORE = 5 * 60;
 
 function TripReminder({ net, leave, day, ride, firstWalk }: { net: Net; leave: number; day: ServiceDay; ride: RideLeg; firstWalk: number }) {
@@ -211,7 +215,7 @@ function RideRows({ net, leg, price }: { net: Net; leg: RideLeg; price?: Price }
             accessibilityRole="button"
             onPress={() => router.push({ pathname: '/stop/[region]/[station]', params: { region: net.stops[leg.board].region, station: String(net.stops[leg.board].stationId) } })}
             style={{ alignSelf: 'flex-start' }}>
-            <StopPhotoThumb region={net.stops[leg.board].region} station={net.stops[leg.board].stationId} size={72} />
+            <StopPhotoThumb region={net.stops[leg.board].region} station={net.stops[leg.board].stationId} codes={stationCodesOf(net, leg.board)} size={72} />
           </Pressable>
           <View style={s.lineRow}>
             <LineBadge label={patternLabel(net, leg.pattern)} color={r?.color ?? null} agencyCode={r?.agencyCode ?? ''} mode={mode} />

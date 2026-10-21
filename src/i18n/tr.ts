@@ -448,4 +448,11 @@ export const tr: Record<keyof typeof pl, string> = {
   offSeasonReadyBody: '{date} tarihine kadar geçerli. Güncel kalkışları görmek için indir.',
   offSeasonUpdate: 'Yeni tarifeyi indir',
   stopGone: 'Bu durak yeni tarifede yok. Geri dön ve durağı yeniden seç.',
+  stopUpdateLost: 'Tarife az önce güncellendi ve bu durağı yeni sürümde bulamadık. Geri dön ve durağı yeniden seç.',
+  loadingSlow: 'Yükleme her zamankinden uzun sürüyor. İnternet bağlantını kontrol et – otel Wi-Fi’ında bazen önce tarayıcıdan giriş yapman gerekir.',
+  crashTitle: 'Bir şeyler ters gitti',
+  crashBody: 'Bu ekran çalışmayı durdurdu. Ne olduğunu kaydettik – bize rapor gönder, daha hızlı düzeltelim.',
+  errorReportTitle: 'Hata raporu gönder',
+  errorReportSub: 'Bir şey çalışmıyor mu? Son hataların listesini e-postayla gönder – kişisel veri olmadan.',
+  errorReportIntro: 'Ne olduğunu kısaca anlat (isteğe bağlı):',
 };

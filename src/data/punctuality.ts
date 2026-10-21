@@ -10,6 +10,7 @@ import { APP_VERSION } from '@/data/appConfig';
 import { recordContribution } from '@/data/badges';
 import { DATA_URL } from '@/data/packages';
 import { arrow, getLang, t } from '@/i18n';
+import { fetchTimeout } from '@/lib/fetchTimeout';
 import { distanceM } from '@/lib/geo';
 import { cancelReminder, setReminder } from '@/lib/reminders';
 import { athensNow, hhmm } from '@/lib/time';
@@ -185,9 +186,11 @@ async function sendQueue(): Promise<'done' | 'limited'> {
     const item = JSON.stringify(body);
     let res: Response;
     try {
-      res = await fetch(`${DATA_URL}/api/punctuality`, { method: 'POST', body: item });
+      res = await fetchTimeout(`${DATA_URL}/api/punctuality`, { method: 'POST', body: item });
     } catch {
-      continue; // bez internetu – zostaje w kolejce
+      // Bez internetu albo bez odpowiedzi w limicie czasu – zostaje w kolejce, a flaga `sending` się zwalnia
+      // (bez limitu jedno zawieszone połączenie blokowało wysyłkę do ponownego uruchomienia aplikacji).
+      continue;
     }
     // 429 – za dużo zgłoszeń z tego adresu: to i dalsze czekają w kolejce do następnej wysyłki.
     if (res.status === 429) return 'limited';

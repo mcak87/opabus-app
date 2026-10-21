@@ -16,6 +16,7 @@ import { Txt } from './ui';
 export function StationCard({
   region,
   station,
+  codes,
   title,
   sub,
   icon = 'bus',
@@ -27,6 +28,8 @@ export function StationCard({
 }: {
   region: string;
   station: number;
+  /** Kody słupków z GTFS (gdy karta je zna, np. ulubione) – do zdjęcia przystanku; bez nich odczyt z paczki. */
+  codes?: string[];
   title: string;
   sub?: string | null;
   icon?: IconName;
@@ -36,7 +39,7 @@ export function StationCard({
   nowSec: number;
   emptyText: string;
 }) {
-  const photo = useStationPhotos(region, station)[0];
+  const photo = useStationPhotos(region, station, codes)[0];
   return (
     <Pressable
       accessibilityRole="button"

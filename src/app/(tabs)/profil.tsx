@@ -15,9 +15,11 @@ import { C, shadow } from '@/constants/theme';
 import { BADGES, tierOf } from '@/data/badgeRules';
 import { useBadges } from '@/data/badges';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
+import { sendErrorReport } from '@/data/errorReport';
 import { lodgingStopName } from '@/data/lodging';
 import { useNews } from '@/data/news';
 import { hasTranslation, LANGS, rtlRestartNeeded, setLang, t, upper, useLang } from '@/i18n';
+import { useErrorCount } from '@/lib/errorLog';
 import { cancelReminder, ensurePermission } from '@/lib/reminders';
 import { setLodging, setRemindLastBus, useSettings } from '@/lib/settings';
 import { formatDate } from '@/lib/time';
@@ -28,6 +30,7 @@ export default function ProfileScreen() {
   const data = useData();
   const { lodging, remindLastBus } = useSettings();
   const news = useNews();
+  const errorCount = useErrorCount();
   const badges = useBadges();
   const earnedBadges = BADGES.filter((b) => tierOf(b, badges.stats) > 0);
   const [showLangs, setShowLangs] = useState(false);
@@ -232,6 +235,24 @@ export default function ProfileScreen() {
                 {t('partnersSub')}
               </Txt>
             </View>
+            <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
+          </Pressable>
+          {/* Dziennik błędów z telefonu mailem (beta) – nic nie wychodzi samo, tylko po dotknięciu. */}
+          <Pressable accessibilityRole="button" onPress={() => sendErrorReport()} style={[s.menuRow, s.menuLine]}>
+            <Icon name="mail" size={22} color={C.blue} />
+            <View style={{ flex: 1, paddingVertical: 10 }}>
+              <Txt w="extrabold" size={16} color={C.ink}>
+                {t('errorReportTitle')}
+              </Txt>
+              <Txt w="semibold" size={13} color={C.muted}>
+                {t('errorReportSub')}
+              </Txt>
+            </View>
+            {errorCount > 0 ? (
+              <Txt w="extrabold" size={13} color={C.muted}>
+                {errorCount}
+              </Txt>
+            ) : null}
             <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
           </Pressable>
         </View>
