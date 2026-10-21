@@ -7,7 +7,7 @@ import { Icon } from '@/components/Icon';
 import { LodgingReturn } from '@/components/LodgingReturn';
 import { OffSeasonCard } from '@/components/OffSeason';
 import { ScreenHeader } from '@/components/ScreenHeader';
-import { AddPhotoLink, StopPhotos } from '@/components/StopPhotos';
+import { openAddPhoto, StopPhotos } from '@/components/StopPhotos';
 import { LineBadge, Txt, useTextWidth } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
@@ -133,6 +133,30 @@ export default function StopScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={s.body}>
+          {/* Zdjęcie i położenie tuż pod nazwą – na dole, pod długą listą odjazdów, trudno je było zauważyć (decyzja Michała 21.10.2026). */}
+          {st ? (
+            <View style={s.actions}>
+              {/* Poza sezonem karta niżej prosi już o zdjęcie (rozkładu na przystanku) – bez drugiej prośby. */}
+              {!expired ? (
+                <Pressable accessibilityRole="button" onPress={() => openAddPhoto(region, st.id)} style={s.action}>
+                  <Icon name="camera" size={20} color={C.blue} stroke={2.2} />
+                  <Txt w="bold" size={13} color={C.ink} numberOfLines={2} style={s.actionText}>
+                    {t('photoAdd')}
+                  </Txt>
+                </Pressable>
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                accessibilityHint={approx ? t('fixApproxBody') : undefined}
+                onPress={openFix}
+                style={[s.action, approx && s.actionWarn]}>
+                <Icon name="pin" size={20} color={approx ? C.orange : C.blue} stroke={2.2} />
+                <Txt w="bold" size={13} color={approx ? C.orangeText : C.ink} numberOfLines={2} style={s.actionText}>
+                  {approx ? t('fixApproxTitle') : t('fixButton')}
+                </Txt>
+              </Pressable>
+            </View>
+          ) : null}
           {meta && !expired ? (
             <Txt w="bold" size={13} color={C.muted} style={{ paddingHorizontal: 8 }}>
               {t('timetableValid', { date: formatDate(meta.validTo) })}
@@ -224,31 +248,6 @@ export default function StopScreen() {
               </View>
             </View>
           ) : null}
-          {/* Poza sezonem karta wyżej prosi już o zdjęcie (rozkładu na przystanku) – bez drugiej prośby. */}
-          {st && !expired ? <AddPhotoLink region={region} station={st.id} stopCodes={codes} /> : null}
-          {st ? (
-            approx ? (
-              <Pressable accessibilityRole="button" onPress={openFix} style={s.fixCard}>
-                <Icon name="pin" size={24} color={C.orange} />
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Txt w="extrabold" size={15} color={C.orangeText}>
-                    {t('fixApproxTitle')}
-                  </Txt>
-                  <Txt w="semibold" size={13} color={C.orangeDeep} style={{ lineHeight: 18 }}>
-                    {t('fixApproxBody')}
-                  </Txt>
-                </View>
-                <Icon name="chevronR" size={18} color={C.orangeText} stroke={2.4} />
-              </Pressable>
-            ) : (
-              <Pressable accessibilityRole="button" onPress={openFix} style={s.fixLink} hitSlop={6}>
-                <Icon name="pin" size={16} color={C.muted} />
-                <Txt w="bold" size={13} color={C.muted}>
-                  {t('fixButton')}
-                </Txt>
-              </Pressable>
-            )
-          ) : null}
           {st && isLodgingStop ? (
             <View style={s.fixLink}>
               <Icon name="home" size={16} color={C.green} />
@@ -283,7 +282,10 @@ const s = StyleSheet.create({
   more: { alignItems: 'center', paddingVertical: 12 },
   lastCard: { flexDirection: 'row', gap: 14, backgroundColor: C.orangeBg, borderColor: C.orangeLine, borderWidth: 1.5, borderRadius: 18, padding: 14, marginTop: 4 },
   lastIcon: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.orange, alignItems: 'center', justifyContent: 'center' },
-  fixCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.orangeBg, borderColor: C.orangeLine, borderWidth: 1.5, borderRadius: 18, padding: 14, marginTop: 4 },
+  actions: { flexDirection: 'row', gap: 8 },
+  action: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 52, backgroundColor: C.sky, borderColor: C.sky, borderWidth: 1.5, borderRadius: 16, paddingVertical: 8, paddingHorizontal: 12 },
+  actionWarn: { backgroundColor: C.orangeBg, borderColor: C.orangeLine },
+  actionText: { flex: 1, lineHeight: 17 },
   fixLink: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 14 },
   star: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', ...shadow },
 });

@@ -6,14 +6,15 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { C, shadow } from '@/constants/theme';
+import { C } from '@/constants/theme';
 import { photoUrl, usePendingMine, useStationPhotos, type StopPhoto } from '@/data/photos';
 import { t, useLang } from '@/i18n';
 
 import { Icon } from './Icon';
 import { Txt } from './ui';
 
-const openAdd = (region: string, station: number) => router.push({ pathname: '/zdjecie/[region]/[station]', params: { region, station: String(station) } });
+/** Ekran dodawania zdjęcia przystanku (galeria niżej i przycisk pod nazwą na ekranie przystanku). */
+export const openAddPhoto = (region: string, station: number) => router.push({ pathname: '/zdjecie/[region]/[station]', params: { region, station: String(station) } });
 
 /** Galeria na górze ekranu przystanku (tylko gdy są zdjęcia albo czeka moje). */
 export function StopPhotos({ region, station, stopCodes }: { region: string; station: number; stopCodes: string[] }) {
@@ -36,7 +37,7 @@ export function StopPhotos({ region, station, stopCodes }: { region: string; sta
               ) : null}
             </Pressable>
           ))}
-          <Pressable accessibilityRole="button" onPress={() => openAdd(region, station)} style={s.addTile}>
+          <Pressable accessibilityRole="button" onPress={() => openAddPhoto(region, station)} style={s.addTile}>
             <Icon name="camera" size={26} color={C.blue} />
             <Txt w="extrabold" size={13} color={C.blue} style={{ textAlign: 'center' }}>
               {t('photoAdd')}
@@ -54,30 +55,6 @@ export function StopPhotos({ region, station, stopCodes }: { region: string; sta
       ) : null}
       <PhotoViewer photos={photos} index={open} onClose={() => setOpen(null)} />
     </View>
-  );
-}
-
-/** Zachęta na dole ekranu przystanku, gdy nie ma jeszcze zdjęć. */
-export function AddPhotoLink({ region, station, stopCodes }: { region: string; station: number; stopCodes: string[] }) {
-  useLang();
-  const photos = useStationPhotos(region, station, stopCodes);
-  const pending = usePendingMine(region, station);
-  if (photos.length || pending) return null;
-  return (
-    <Pressable accessibilityRole="button" onPress={() => openAdd(region, station)} style={s.addCard}>
-      <View style={s.addIcon}>
-        <Icon name="camera" size={22} color="#FFFFFF" stroke={2.2} />
-      </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Txt w="extrabold" size={15} color={C.ink}>
-          {t('photoAddTitle')}
-        </Txt>
-        <Txt w="semibold" size={13} color={C.text2} style={{ lineHeight: 18 }}>
-          {t('photoAddBody')}
-        </Txt>
-      </View>
-      <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
-    </Pressable>
   );
 }
 
@@ -122,8 +99,6 @@ const s = StyleSheet.create({
   thumbCaption: { paddingHorizontal: 2 },
   addTile: { width: 110, borderRadius: 14, borderWidth: 2, borderStyle: 'dashed', borderColor: C.blue, alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, minHeight: 120 },
   pending: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: C.sky, borderRadius: 14, padding: 12 },
-  addCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#FFFFFF', borderRadius: 18, padding: 14, marginTop: 4, ...shadow },
-  addIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   viewer: { flex: 1, backgroundColor: '#0B1430' },
   viewerCaption: { textAlign: 'center', paddingHorizontal: 24, paddingTop: 16 },
   close: { position: 'absolute', right: 16, width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
