@@ -175,6 +175,7 @@ export const fi: Record<keyof typeof pl, string> = {
   fixThanks: 'Kiitos!',
   fixThanksBody: 'Tarkistamme ilmoituksen ja korjaamme pysäkin seuraavassa aikataulupäivityksessä.',
   fixSendError: 'Lähetys epäonnistui – tarkista nettiyhteys ja yritä uudelleen.',
+  sendTooMany: 'Liian monta lähetystä kerralla – yritä uudelleen minuutin päästä.',
   fixTooFar: 'Paikka on yli 5 km:n päässä pysäkistä – tarkista, että kyseessä on oikea pysäkki.',
   fareExact: '{price} €',
   fareUpTo: 'enintään {price} €',

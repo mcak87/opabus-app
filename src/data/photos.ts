@@ -126,8 +126,9 @@ export type Upload = {
   caption: string;
 };
 
-/** Zmniejsza zdjęcie (bez metadanych) i wysyła. ok – czeka na sprawdzenie; error – brak internetu albo odrzucone. */
-export async function uploadPhoto(u: Upload): Promise<'ok' | 'error'> {
+/** Zmniejsza zdjęcie (bez metadanych) i wysyła. ok – czeka na sprawdzenie; limited – za dużo wysyłek z tego adresu
+ *  (serwer: 10 na minutę), spróbować za chwilę; error – brak internetu albo odrzucone. */
+export async function uploadPhoto(u: Upload): Promise<'ok' | 'limited' | 'error'> {
   const first = !regionPhotos(u.region).photos.some((p) => p.station === u.station || p.stops.some((c) => u.stops.includes(c)));
   const scale = Math.min(1, MAX_SIDE / Math.max(u.width, u.height));
   const ctx = ImageManipulator.manipulate(u.uri);
@@ -164,6 +165,7 @@ export async function uploadPhoto(u: Upload): Promise<'ok' | 'error'> {
         image: out.base64,
       }),
     });
+    if (res.status === 429) return 'limited';
     if (!res.ok) return 'error';
     const { id } = (await res.json()) as { id?: string };
     if (id) {

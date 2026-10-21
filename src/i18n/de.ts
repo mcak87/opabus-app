@@ -175,6 +175,7 @@ export const de: Record<keyof typeof pl, string> = {
   fixThanks: 'Danke!',
   fixThanksBody: 'Wir prüfen deine Meldung und korrigieren die Haltestelle mit dem nächsten Fahrplan-Update.',
   fixSendError: 'Senden fehlgeschlagen – prüfe deine Internetverbindung und versuch es noch mal.',
+  sendTooMany: 'Zu viele Uploads auf einmal – versuch es in einer Minute noch mal.',
   fixTooFar: 'Dieser Ort ist mehr als 5 km von der Haltestelle entfernt – ist es wirklich die richtige Haltestelle?',
   fareExact: '{price} €',
   fareUpTo: 'bis {price} €',

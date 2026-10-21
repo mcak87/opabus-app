@@ -175,6 +175,7 @@ export const da: Record<keyof typeof pl, string> = {
   fixThanks: 'Tak!',
   fixThanksBody: 'Vi tjekker din melding og retter stoppestedet i næste køreplansopdatering.',
   fixSendError: 'Kunne ikke sende – tjek din internetforbindelse, og prøv igen.',
+  sendTooMany: 'For mange afsendelser på én gang – prøv igen om et minut.',
   fixTooFar: 'Stedet er mere end 5 km fra stoppestedet – tjek, at det er det rigtige stoppested.',
   fareExact: '{price} €',
   fareUpTo: 'op til {price} €',

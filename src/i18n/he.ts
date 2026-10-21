@@ -175,6 +175,7 @@ export const he: Record<keyof typeof pl, string> = {
   fixThanks: 'תודה!',
   fixThanksBody: 'נבדוק את הדיווח ונתקן את התחנה בעדכון הקרוב של לוחות הזמנים.',
   fixSendError: 'השליחה נכשלה – יש לבדוק את החיבור לאינטרנט ולנסות שוב.',
+  sendTooMany: 'יותר מדי שליחות בבת אחת – יש לנסות שוב בעוד דקה.',
   fixTooFar: 'המקום הזה רחוק יותר מ-5 ק״מ מהתחנה – כדאי לוודא שזו התחנה הנכונה.',
   fareExact: '{price} €',
   fareUpTo: 'עד {price} €',

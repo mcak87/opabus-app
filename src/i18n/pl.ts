@@ -173,6 +173,7 @@ export const pl = {
   fixThanks: 'Dziękujemy!',
   fixThanksBody: 'Sprawdzimy zgłoszenie i poprawimy przystanek w najbliższej aktualizacji rozkładów.',
   fixSendError: 'Nie udało się wysłać – sprawdź internet i spróbuj ponownie.',
+  sendTooMany: 'Za dużo wysyłek naraz – spróbuj ponownie za minutę.',
   fixTooFar: 'To miejsce jest ponad 5 km od przystanku – sprawdź, czy to na pewno ten przystanek.',
   fareExact: '{price} €',
   fareUpTo: 'do {price} €',

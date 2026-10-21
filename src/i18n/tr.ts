@@ -175,6 +175,7 @@ export const tr: Record<keyof typeof pl, string> = {
   fixThanks: 'Teşekkürler!',
   fixThanksBody: 'Bildirimini kontrol edip durağı bir sonraki tarife güncellemesinde düzelteceğiz.',
   fixSendError: 'Gönderilemedi – internet bağlantını kontrol edip tekrar dene.',
+  sendTooMany: 'Çok fazla gönderim yapıldı – bir dakika sonra tekrar dene.',
   fixTooFar: 'Bu yer duraktan 5 km’den fazla uzakta – doğru durak olduğundan emin ol.',
   fareExact: '{price} €',
   fareUpTo: 'en fazla {price} €',

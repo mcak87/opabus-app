@@ -175,6 +175,7 @@ export const sv: Record<keyof typeof pl, string> = {
   fixThanks: 'Tack!',
   fixThanksBody: 'Vi granskar rapporten och rättar hållplatsen i nästa tidtabellsuppdatering.',
   fixSendError: 'Det gick inte att skicka – kontrollera internetanslutningen och försök igen.',
+  sendTooMany: 'För många uppladdningar på en gång – försök igen om en minut.',
   fixTooFar: 'Platsen ligger mer än 5 km från hållplatsen – kontrollera att det verkligen är rätt hållplats.',
   fareExact: '{price} €',
   fareUpTo: 'upp till {price} €',

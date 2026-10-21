@@ -65,7 +65,7 @@ export default function AddStopPhoto() {
     try {
       const r = await uploadPhoto({ region, station: st.id, stationName: st.name, stops: codes, lat: st.lat, lon: st.lon, ...photo, caption });
       if (r === 'ok') setDone(true);
-      else setMsg('fixSendError');
+      else setMsg(r === 'limited' ? 'sendTooMany' : 'fixSendError');
     } catch {
       setMsg('fixSendError');
     } finally {

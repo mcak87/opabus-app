@@ -157,26 +157,55 @@ export async function report(answer: Answer | 'arrivedNow', source: 'live' | 'la
   return a;
 }
 
+/** Wysyłka w toku (jedna naraz) i prośba o kolejne przejście, gdy w trakcie ktoś znów wywołał flushReports. */
+let sending = false;
+let again = false;
+
 /** Wysyła zgłoszenia z kolejki (przy starcie aplikacji i po każdym zgłoszeniu). */
 export async function flushReports() {
-  const queue = readJson<unknown[]>(K_QUEUE, []);
-  if (!queue.length) return;
-  const left: unknown[] = [];
-  for (const body of queue) {
-    try {
-      const res = await fetch(`${DATA_URL}/api/punctuality`, { method: 'POST', body: JSON.stringify(body) });
-      // Przyjęte zgłoszenie liczy się do odznak (tylko w telefonie).
-      if (res.ok) {
-        const b = body as { region?: string; date?: string };
-        recordContribution({ kind: 'report', region: b.region ?? '', date: b.date });
-      }
-      // 400 – serwer odrzucił (np. za stare zgłoszenie): nie ponawiamy.
-      if (!res.ok && res.status !== 400) left.push(body);
-    } catch {
-      left.push(body);
-    }
+  if (sending) {
+    // Już wysyłamy – zgłoszenie dopisane w tym czasie pójdzie zaraz po tej wysyłce.
+    again = true;
+    return;
   }
-  Storage.setItemSync(K_QUEUE, JSON.stringify(left));
+  sending = true;
+  try {
+    do {
+      again = false;
+      if ((await sendQueue()) === 'limited') break;
+    } while (again);
+  } finally {
+    sending = false;
+  }
+}
+
+/** Jedno przejście przez kolejkę. Wysłane zgłoszenie znika z kolejki od razu, więc dopisane w trakcie zostają. */
+async function sendQueue(): Promise<'done' | 'limited'> {
+  for (const body of readJson<{ region?: string; date?: string }[]>(K_QUEUE, [])) {
+    const item = JSON.stringify(body);
+    let res: Response;
+    try {
+      res = await fetch(`${DATA_URL}/api/punctuality`, { method: 'POST', body: item });
+    } catch {
+      continue; // bez internetu – zostaje w kolejce
+    }
+    // 429 – za dużo zgłoszeń z tego adresu: to i dalsze czekają w kolejce do następnej wysyłki.
+    if (res.status === 429) return 'limited';
+    // 400 – serwer odrzucił (np. za stare zgłoszenie): nie ponawiamy.
+    if (res.ok || res.status === 400) dropFromQueue(item);
+    // Przyjęte zgłoszenie liczy się do odznak (tylko w telefonie).
+    if (res.ok) recordContribution({ kind: 'report', region: body.region ?? '', date: body.date });
+  }
+  return 'done';
+}
+
+/** Usuwa z kolejki jedno wysłane zgłoszenie – kolejkę czyta na nowo, żeby nie skasować dopisanych w trakcie wysyłki. */
+function dropFromQueue(item: string) {
+  const queue = readJson<unknown[]>(K_QUEUE, []);
+  const i = queue.findIndex((b) => JSON.stringify(b) === item);
+  if (i < 0) return;
+  queue.splice(i, 1);
+  Storage.setItemSync(K_QUEUE, JSON.stringify(queue));
 }
 
 /** Opis kursu w karcie: „40 → Rodos”. */

@@ -174,6 +174,7 @@ export const en: Record<keyof typeof pl, string> = {
   fixThanks: 'Thank you!',
   fixThanksBody: 'We will check your report and fix the stop in the next timetable update.',
   fixSendError: 'Sending failed – check your internet connection and try again.',
+  sendTooMany: 'Too many uploads at once – please try again in a minute.',
   fixTooFar: 'This place is more than 5 km from the stop – please check it is the right stop.',
   fareExact: '€{price}',
   fareUpTo: 'up to €{price}',

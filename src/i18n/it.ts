@@ -175,6 +175,7 @@ export const it: Record<keyof typeof pl, string> = {
   fixThanks: 'Grazie!',
   fixThanksBody: 'Controlleremo la segnalazione e correggeremo la fermata nel prossimo aggiornamento degli orari.',
   fixSendError: 'Invio non riuscito – controlla la connessione e riprova.',
+  sendTooMany: 'Troppi invii in poco tempo – riprova tra un minuto.',
   fixTooFar: 'Questo punto è a più di 5 km dalla fermata – controlla che sia la fermata giusta.',
   fareExact: '{price} €',
   fareUpTo: 'fino a {price} €',

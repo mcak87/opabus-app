@@ -175,6 +175,7 @@ export const no: Record<keyof typeof pl, string> = {
   fixThanks: 'Takk!',
   fixThanksBody: 'Vi sjekker rapporten og retter holdeplassen i neste oppdatering av rutetabellene.',
   fixSendError: 'Kunne ikke sende – sjekk internettforbindelsen og prøv igjen.',
+  sendTooMany: 'For mange sendinger på en gang – prøv igjen om et minutt.',
   fixTooFar: 'Dette stedet er mer enn 5 km fra holdeplassen – sjekk at det virkelig er riktig holdeplass.',
   fareExact: '{price} €',
   fareUpTo: 'opptil {price} €',
