@@ -439,4 +439,12 @@ export const fi: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Aikataulu pysäkillä',
   offSeasonShort: 'Odotamme uutta aikataulua',
   offSeasonPlanner: 'Tämän alueen aikataulu oli voimassa {date} asti. Odotamme uutta – siihen asti emme voi suunnitella tätä reittiä.',
+  installFailNetwork: 'Aikataulun lataus epäonnistui. Tarkista nettiyhteys ja yritä uudelleen.',
+  installFailApp: 'Tämä aikataulu vaatii uudemman OpaBus-version. Päivitä sovellus.',
+  installFailStorage: 'Aikataulun tallennus epäonnistui. Tarkista, että puhelimessa on vapaata tilaa, ja yritä uudelleen.',
+  updateOnWifi: 'Uusi aikataulu latautuu Wi-Fi-yhteydellä',
+  offSeasonReadyTitle: 'Uusi aikataulu on täällä',
+  offSeasonReadyBody: 'Voimassa {date} asti. Lataa se, niin näet ajantasaiset lähdöt.',
+  offSeasonUpdate: 'Lataa uusi aikataulu',
+  stopGone: 'Tätä pysäkkiä ei ole uudessa aikataulussa. Palaa takaisin ja valitse pysäkki uudelleen.',
 };

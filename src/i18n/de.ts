@@ -444,4 +444,12 @@ export const de: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Fahrplan an der Haltestelle',
   offSeasonShort: 'Wir warten auf den neuen Fahrplan',
   offSeasonPlanner: 'Der Fahrplan in dieser Region galt bis {date}. Wir warten auf einen neuen – bis dahin können wir diese Route nicht planen.',
+  installFailNetwork: 'Der Fahrplan konnte nicht heruntergeladen werden. Prüfe deine Internetverbindung und versuch es noch mal.',
+  installFailApp: 'Dieser Fahrplan braucht eine neuere Version von OpaBus. Aktualisiere die App.',
+  installFailStorage: 'Der Fahrplan konnte nicht gespeichert werden. Prüfe, ob auf deinem Handy genug Speicher frei ist, und versuch es noch mal.',
+  updateOnWifi: 'Neuer Fahrplan wird über WLAN geladen',
+  offSeasonReadyTitle: 'Der neue Fahrplan ist da',
+  offSeasonReadyBody: 'Gültig bis {date}. Lade ihn herunter, um die aktuellen Abfahrten zu sehen.',
+  offSeasonUpdate: 'Neuen Fahrplan herunterladen',
+  stopGone: 'Diese Haltestelle gibt es im neuen Fahrplan nicht. Geh zurück und wähle die Haltestelle noch einmal.',
 };

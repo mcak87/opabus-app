@@ -3,13 +3,17 @@
 import Storage from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 
+import { dedupeFavorites, favoriteKey, migrateFavoritesV1, parseFavorites, type Favorite } from '@/data/favorites';
+
 const K_ONBOARDED = 'settings.onboarded.v1';
 const K_HOME = 'settings.homeRegion.v1';
-const K_FAVS = 'favorites.v1';
+/** v2 (od 10.2026): kody słupków + numer stacji dla wersji paczki. v1 – sam numer stacji, przenoszony raz do v2. */
+const K_FAVS = 'favorites.v2';
+const K_FAVS_V1 = 'favorites.v1';
 const K_LODGING = 'lodging.v1';
 const K_REMIND_LAST = 'settings.remindLastBus.v1';
 
-export type Favorite = { region: string; station: number; name: string; name_en: string };
+export type { Favorite };
 /** „Mój nocleg”: punkt w regionie i najbliższy przystanek (do nazwy na ekranie). */
 export type Lodging = {
   region: string;
@@ -42,9 +46,15 @@ function readLodging(): Lodging | null {
 
 function readFavorites(): Favorite[] {
   try {
-    const v: unknown = JSON.parse(Storage.getItemSync(K_FAVS) ?? '[]');
-    if (!Array.isArray(v)) return [];
-    return v.filter((f): f is Favorite => !!f && typeof f.region === 'string' && typeof f.station === 'number');
+    const v2 = Storage.getItemSync(K_FAVS);
+    if (v2 != null) return parseFavorites(JSON.parse(v2));
+    const v1 = Storage.getItemSync(K_FAVS_V1);
+    if (v1 == null) return [];
+    // Pierwsze uruchomienie po aktualizacji aplikacji: kody słupków uzupełni syncFavorites (DataContext).
+    const migrated = migrateFavoritesV1(JSON.parse(v1));
+    Storage.setItemSync(K_FAVS, JSON.stringify(migrated));
+    Storage.removeItemSync(K_FAVS_V1);
+    return migrated;
   } catch {
     return [];
   }
@@ -100,17 +110,24 @@ export function setRemindLastBus(on: boolean) {
   update({ remindLastBus: on });
 }
 
-const favKey = (region: string, station: number) => `${region}:${station}`;
+/** Czy stacja (numer z paczki w wersji `version`) jest w ulubionych. */
+export function isFavorite(favs: Favorite[], region: string, station: number, version: string): boolean {
+  const key = favoriteKey({ region, station, version });
+  return favs.some((f) => favoriteKey(f) === key);
+}
 
-export function isFavorite(favs: Favorite[], region: string, station: number): boolean {
-  return favs.some((f) => favKey(f.region, f.station) === favKey(region, station));
+function saveFavorites(next: Favorite[]) {
+  Storage.setItemSync(K_FAVS, JSON.stringify(next));
+  update({ favorites: next });
 }
 
 export function toggleFavorite(fav: Favorite) {
-  const key = favKey(fav.region, fav.station);
-  const next = isFavorite(state.favorites, fav.region, fav.station)
-    ? state.favorites.filter((f) => favKey(f.region, f.station) !== key)
-    : [...state.favorites, fav];
-  Storage.setItemSync(K_FAVS, JSON.stringify(next));
-  update({ favorites: next });
+  const key = favoriteKey(fav);
+  saveFavorites(state.favorites.some((f) => favoriteKey(f) === key) ? state.favorites.filter((f) => favoriteKey(f) !== key) : [...state.favorites, fav]);
+}
+
+/** Podmiana wpisów po przeliczeniu do nowej wersji paczki – na bieżącej liście (gwiazdka mogła zmienić ją w międzyczasie). */
+export function replaceFavorites(fixed: Map<string, Favorite>) {
+  if (!fixed.size) return;
+  saveFavorites(dedupeFavorites(state.favorites.map((f) => fixed.get(favoriteKey(f)) ?? f)));
 }

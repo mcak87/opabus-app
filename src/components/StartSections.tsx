@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { C, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
+import { activeFavorites } from '@/data/favorites';
 import { loadFavoriteDepartures, loadPopular, stationNames } from '@/data/nearby';
 import type { Departure, Station } from '@/data/queries';
 import { t, upper } from '@/i18n';
@@ -19,7 +20,7 @@ import { Button, Txt } from './ui';
 export function FavoritesSection({ tick }: { tick: number }) {
   const { favorites } = useSettings();
   const data = useData();
-  const list = useMemo(() => favorites.filter((f) => data.installed[f.region]), [favorites, data.installed]);
+  const list = useMemo(() => activeFavorites(favorites, data.installed), [favorites, data.installed]);
   const [deps, setDeps] = useState<Record<string, Departure[]>>({});
   const [nowSec, setNowSec] = useState(() => athensNow().sec);
 

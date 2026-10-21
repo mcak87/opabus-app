@@ -439,4 +439,12 @@ export const tr: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Duraktaki tarife',
   offSeasonShort: 'Yeni tarife bekleniyor',
   offSeasonPlanner: 'Bu bölgedeki tarife {date} tarihine kadar geçerliydi. Yenisini bekliyoruz – o zamana kadar bu rotayı planlayamayız.',
+  installFailNetwork: 'Tarife indirilemedi. İnternet bağlantını kontrol et ve tekrar dene.',
+  installFailApp: 'Bu tarife için OpaBus’ın daha yeni bir sürümü gerekiyor. Uygulamayı güncelle.',
+  installFailStorage: 'Tarife kaydedilemedi. Telefonunda boş alan olup olmadığını kontrol et ve tekrar dene.',
+  updateOnWifi: 'Yeni tarife Wi-Fi üzerinden indirilecek',
+  offSeasonReadyTitle: 'Yeni tarife hazır',
+  offSeasonReadyBody: '{date} tarihine kadar geçerli. Güncel kalkışları görmek için indir.',
+  offSeasonUpdate: 'Yeni tarifeyi indir',
+  stopGone: 'Bu durak yeni tarifede yok. Geri dön ve durağı yeniden seç.',
 };

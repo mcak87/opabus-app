@@ -438,4 +438,12 @@ export const en: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Timetable at the stop',
   offSeasonShort: 'Waiting for the new timetable',
   offSeasonPlanner: 'The timetable in this region was valid until {date}. We’re waiting for a new one – until then we can’t plan this route.',
+  installFailNetwork: 'Couldn’t download the timetable. Check your internet connection and try again.',
+  installFailApp: 'This timetable needs a newer version of OpaBus. Update the app.',
+  installFailStorage: 'Couldn’t save the timetable. Check that your phone has free space and try again.',
+  updateOnWifi: 'New timetable will download over Wi-Fi',
+  offSeasonReadyTitle: 'The new timetable is here',
+  offSeasonReadyBody: 'Valid until {date}. Download it to see current departures.',
+  offSeasonUpdate: 'Download the new timetable',
+  stopGone: 'This stop isn’t in the new timetable. Go back and choose the stop again.',
 };

@@ -1,13 +1,17 @@
 // „Poza sezonem” (projekt: canvas „PozaSezonem”) – rozkład regionu wygasł, a nowego jeszcze nie ma. Zamiast pustej listy:
 // wyjaśnienie, ostatni znany rozkład (wyraźnie oznaczony jako możliwie nieaktualny), telefon przewoźnika z paczki
-// i prośba o zdjęcie rozkładu wiszącego na przystanku. Bez „Powiadom mnie” – aplikacja nie sprawdza rozkładów w tle.
+// i prośba o zdjęcie rozkładu wiszącego na przystanku. Bez „Powiadom mnie” – aplikacja nie sprawdza rozkładów w tle,
+// tylko przy połączeniu (start, powrót do aplikacji) i wtedy sama instaluje nowszą wersję (DataContext). Gdy nowa wersja
+// jest już na serwerze, ale jeszcze nie w telefonie (duża paczka bez Wi-Fi, nieudane pobieranie) – „Pobierz nowy rozkład”.
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
-import { LineBadge, Txt, useTextWidth } from '@/components/ui';
+import { InstallFailNote, PackageProgress } from '@/components/RegionList';
+import { Button, LineBadge, Txt, useTextWidth } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
+import { useData } from '@/data/DataContext';
 import { openRegion } from '@/data/packages';
 import { stationAgencies, stationDepartures, type Agency, type Departure } from '@/data/queries';
 import { t, type Key } from '@/i18n';
@@ -45,6 +49,12 @@ export function OffSeasonCard({ region, station, validFrom, validTo }: { region:
 
   const contacts = agencies.filter((a) => a.phone || a.url).slice(0, 2);
 
+  const data = useData();
+  const newPkg = data.hasUpdate(region) ? data.manifest?.packages.find((p) => p.region === region) : undefined;
+  /** Nowa wersja ma już ważny rozkład (a nie np. tylko poprawki przystanków w starym). */
+  const newValidTo = newPkg ? Number(newPkg.valid_to) : 0;
+  const ready = newValidTo >= athensNow().date;
+
   return (
     <View style={{ gap: 10 }}>
       <View style={[s.card, s.main]}>
@@ -52,11 +62,25 @@ export function OffSeasonCard({ region, station, validFrom, validTo }: { region:
           <Icon name="calendarClock" size={36} color="#B35C00" stroke={1.8} />
         </View>
         <Txt w="black" size={22} color={C.ink} style={s.center}>
-          {t('offSeasonTitle')}
+          {ready ? t('offSeasonReadyTitle') : t('offSeasonTitle')}
         </Txt>
         <Txt w="bold" size={15} color={C.text2} style={[s.center, { lineHeight: 21 }]}>
-          {t('offSeasonBody', { date: formatDate(validTo) })}
+          {ready ? t('offSeasonReadyBody', { date: formatDate(newValidTo) }) : t('offSeasonBody', { date: formatDate(validTo) })}
         </Txt>
+        {newPkg ? (
+          <>
+            <Button
+              title={ready ? t('offSeasonUpdate') : t('update')}
+              icon="download"
+              loading={data.busy[region]}
+              // Błąd pokazuje InstallFailNote niżej; po instalacji ekran przystanku sam wczyta nowy rozkład.
+              onPress={() => data.install(region).catch(() => {})}
+              style={s.stretch}
+            />
+            <PackageProgress region={region} style={s.stretch} />
+            <InstallFailNote region={region} style={s.center} />
+          </>
+        ) : null}
         <Pressable accessibilityRole="button" accessibilityState={{ expanded: showOld }} onPress={toggleOld} style={s.outline}>
           <Txt w="extrabold" size={15} color={C.blue}>
             {showOld ? t('offSeasonHideOld') : t('offSeasonShowOld')}
@@ -142,6 +166,7 @@ const s = StyleSheet.create({
   main: { alignItems: 'center', gap: 10, paddingHorizontal: 20, paddingTop: 22, paddingBottom: 20 },
   icon: { width: 72, height: 72, borderRadius: 24, backgroundColor: C.orangeBg, alignItems: 'center', justifyContent: 'center' },
   center: { textAlign: 'center' },
+  stretch: { alignSelf: 'stretch', marginTop: 8 },
   outline: { marginTop: 8, alignSelf: 'stretch', height: 48, borderRadius: 16, borderWidth: 2, borderColor: C.blue, alignItems: 'center', justifyContent: 'center' },
   oldRow: { flexDirection: 'row', alignItems: 'center', gap: 10, opacity: 0.85 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 16 },

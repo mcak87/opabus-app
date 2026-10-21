@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon';
 import { PanoramaHeader, Txt } from '@/components/ui';
 import { C, F, shadow } from '@/constants/theme';
 import { useData } from '@/data/DataContext';
+import { activeFavorites } from '@/data/favorites';
 import { stationNames } from '@/data/nearby';
 import { openRegion } from '@/data/packages';
 import { searchStations, type Station } from '@/data/queries';
@@ -30,9 +31,14 @@ export default function StopsScreen() {
   const [view, setView] = useState<'list' | 'map'>('list');
   const regions = Object.keys(data.installed);
   const { favorites } = useSettings();
-  const favRows: Hit[] = favorites
-    .filter((f) => data.installed[f.region])
-    .map((f) => ({ id: f.station, name: f.name, name_en: f.name_en, lat: 0, lon: 0, region: f.region }));
+  const favRows: Hit[] = activeFavorites(favorites, data.installed).map((f) => ({
+    id: f.station,
+    name: f.name,
+    name_en: f.name_en,
+    lat: 0,
+    lon: 0,
+    region: f.region,
+  }));
 
   // Wejście z pola „Skąd chcesz jechać?” na Starcie – od razu klawiatura.
   const { focus } = useLocalSearchParams<{ focus?: string }>();

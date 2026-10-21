@@ -444,4 +444,12 @@ export const it: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Orario alla fermata',
   offSeasonShort: 'In attesa del nuovo orario',
   offSeasonPlanner: 'L’orario in questa regione era valido fino al {date}. Siamo in attesa di quello nuovo – fino ad allora non possiamo pianificare questo percorso.',
+  installFailNetwork: 'Impossibile scaricare l’orario. Controlla la connessione e riprova.',
+  installFailApp: 'Questo orario richiede una versione più recente di OpaBus. Aggiorna l’app.',
+  installFailStorage: 'Impossibile salvare l’orario. Controlla che ci sia spazio libero sul telefono e riprova.',
+  updateOnWifi: 'Il nuovo orario si scaricherà via Wi-Fi',
+  offSeasonReadyTitle: 'Il nuovo orario è arrivato',
+  offSeasonReadyBody: 'Valido fino al {date}. Scaricalo per vedere le partenze aggiornate.',
+  offSeasonUpdate: 'Scarica il nuovo orario',
+  stopGone: 'Questa fermata non c’è nel nuovo orario. Torna indietro e scegli di nuovo la fermata.',
 };

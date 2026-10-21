@@ -439,4 +439,12 @@ export const sv: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Tidtabell vid hållplatsen',
   offSeasonShort: 'Vi väntar på en ny tidtabell',
   offSeasonPlanner: 'Tidtabellen i den här regionen gällde till {date}. Vi väntar på en ny – tills dess kan vi inte planera den här resan.',
+  installFailNetwork: 'Det gick inte att ladda ner tidtabellen. Kontrollera internetanslutningen och försök igen.',
+  installFailApp: 'Den här tidtabellen kräver en nyare version av OpaBus. Uppdatera appen.',
+  installFailStorage: 'Det gick inte att spara tidtabellen. Kontrollera att det finns ledigt utrymme i telefonen och försök igen.',
+  updateOnWifi: 'Ny tidtabell laddas ner via wifi',
+  offSeasonReadyTitle: 'Den nya tidtabellen är här',
+  offSeasonReadyBody: 'Gäller till {date}. Ladda ner den för att se aktuella avgångar.',
+  offSeasonUpdate: 'Ladda ner ny tidtabell',
+  stopGone: 'Den här hållplatsen finns inte i den nya tidtabellen. Gå tillbaka och välj hållplatsen igen.',
 };

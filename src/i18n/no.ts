@@ -439,4 +439,12 @@ export const no: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Rutetabell på holdeplassen',
   offSeasonShort: 'Vi venter på ny rutetabell',
   offSeasonPlanner: 'Rutetabellen i denne regionen gjaldt til {date}. Vi venter på en ny – inntil da kan vi ikke planlegge denne reisen.',
+  installFailNetwork: 'Kunne ikke laste ned rutetabellen. Sjekk internettforbindelsen og prøv igjen.',
+  installFailApp: 'Denne rutetabellen krever en nyere versjon av OpaBus. Oppdater appen.',
+  installFailStorage: 'Kunne ikke lagre rutetabellen. Sjekk at det er ledig plass på telefonen, og prøv igjen.',
+  updateOnWifi: 'Ny rutetabell lastes ned via wifi',
+  offSeasonReadyTitle: 'Den nye rutetabellen er her',
+  offSeasonReadyBody: 'Gjelder til {date}. Last den ned for å se oppdaterte avganger.',
+  offSeasonUpdate: 'Last ned ny rutetabell',
+  stopGone: 'Dette stoppestedet finnes ikke i den nye rutetabellen. Gå tilbake og velg stoppested på nytt.',
 };

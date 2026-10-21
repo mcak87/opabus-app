@@ -439,4 +439,12 @@ export const he: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'לוח הזמנים בתחנה',
   offSeasonShort: 'ממתינים ללוח הזמנים החדש',
   offSeasonPlanner: 'לוח הזמנים באזור הזה היה בתוקף עד {date}. אנחנו ממתינים לחדש – עד אז אי אפשר לתכנן את המסלול הזה.',
+  installFailNetwork: 'לא הצלחנו להוריד את לוח הזמנים. יש לבדוק את החיבור לאינטרנט ולנסות שוב.',
+  installFailApp: 'לוח הזמנים הזה דורש גרסה חדשה יותר של OpaBus. יש לעדכן את האפליקציה.',
+  installFailStorage: 'לא הצלחנו לשמור את לוח הזמנים. יש לבדוק שיש מקום פנוי בטלפון ולנסות שוב.',
+  updateOnWifi: 'לוח הזמנים החדש יירד דרך Wi-Fi',
+  offSeasonReadyTitle: 'לוח הזמנים החדש כבר כאן',
+  offSeasonReadyBody: 'בתוקף עד {date}. אפשר להוריד אותו כדי לראות את היציאות העדכניות.',
+  offSeasonUpdate: 'הורדת לוח הזמנים החדש',
+  stopGone: 'התחנה הזו לא מופיעה בלוח הזמנים החדש. אפשר לחזור ולבחור תחנה מחדש.',
 };

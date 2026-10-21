@@ -11,7 +11,7 @@ import { Icon } from '@/components/Icon';
 import { LodgingPrompt, LodgingReturn } from '@/components/LodgingReturn';
 import { WaitingBanner } from '@/components/WaitCard';
 import { Logo } from '@/components/Logo';
-import { PackageProgress } from '@/components/RegionList';
+import { InstallFailNote, PackageProgress } from '@/components/RegionList';
 import { EnableLocationCard, FavoritesSection, PopularSection } from '@/components/StartSections';
 import { SectionTitle, StationCard } from '@/components/StationCard';
 import { Button, Card, PanoramaHeader, Pill, Txt } from '@/components/ui';
@@ -138,6 +138,8 @@ export default function StartScreen() {
   const onRefresh = () => {
     setRefreshing(true);
     if (loc.state === 'ok') locate();
+    // Także nowe rozkłady z serwera – nowsze wersje pobranych regionów instalują się same (DataContext).
+    data.refresh();
     setTick((x) => x + 1);
     setTimeout(() => setRefreshing(false), 700);
   };
@@ -208,9 +210,10 @@ export default function StartScreen() {
               title={data.busy[primary.region] ? t('downloading') : t('regionDownload', { name: data.regionName(primary.region) })}
               icon="download"
               loading={data.busy[primary.region]}
-              onPress={() => data.install(primary.region, { withMap: true }).catch(() => setError(true))}
+              onPress={() => data.install(primary.region, { withMap: true }).catch(() => {})}
             />
             <PackageProgress region={primary.region} />
+            <InstallFailNote region={primary.region} />
           </Card>
         ) : null}
 

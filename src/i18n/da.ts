@@ -439,4 +439,12 @@ export const da: Record<keyof typeof pl, string> = {
   offSeasonPhotoCaption: 'Køreplan ved stoppestedet',
   offSeasonShort: 'Vi venter på en ny køreplan',
   offSeasonPlanner: 'Køreplanen i denne region gjaldt til {date}. Vi venter på en ny – indtil da kan vi ikke planlægge denne rute.',
+  installFailNetwork: 'Kunne ikke hente køreplanen. Tjek din internetforbindelse, og prøv igen.',
+  installFailApp: 'Denne køreplan kræver en nyere version af OpaBus. Opdater appen.',
+  installFailStorage: 'Kunne ikke gemme køreplanen. Tjek, at der er ledig plads på telefonen, og prøv igen.',
+  updateOnWifi: 'Ny køreplan hentes via wi-fi',
+  offSeasonReadyTitle: 'Den nye køreplan er her',
+  offSeasonReadyBody: 'Gælder til {date}. Hent den for at se aktuelle afgange.',
+  offSeasonUpdate: 'Hent ny køreplan',
+  stopGone: 'Dette stoppested findes ikke i den nye køreplan. Gå tilbage, og vælg stoppestedet igen.',
 };

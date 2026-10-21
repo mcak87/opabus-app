@@ -442,4 +442,12 @@ export const pl = {
   offSeasonPhotoCaption: 'Rozkład na przystanku',
   offSeasonShort: 'Czekamy na nowy rozkład',
   offSeasonPlanner: 'Rozkład w tym regionie obowiązywał do {date}. Czekamy na nowy – do tego czasu nie zaplanujemy trasy.',
+  installFailNetwork: 'Nie udało się pobrać rozkładu. Sprawdź internet i spróbuj ponownie.',
+  installFailApp: 'Ten rozkład wymaga nowszej wersji OpaBus. Zaktualizuj aplikację.',
+  installFailStorage: 'Nie udało się zapisać rozkładu. Sprawdź, czy w telefonie jest wolne miejsce, i spróbuj ponownie.',
+  updateOnWifi: 'Nowy rozkład pobierze się przez Wi-Fi',
+  offSeasonReadyTitle: 'Jest już nowy rozkład',
+  offSeasonReadyBody: 'Obowiązuje do {date}. Pobierz go, żeby zobaczyć aktualne odjazdy.',
+  offSeasonUpdate: 'Pobierz nowy rozkład',
+  stopGone: 'Tego przystanku nie ma w nowym rozkładzie. Wróć i wybierz przystanek jeszcze raz.',
 };

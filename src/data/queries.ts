@@ -166,6 +166,52 @@ export async function stationIdForStopCode(db: Db, code: string): Promise<number
   return rows[0]?.station_id ?? null;
 }
 
+/** Kody słupków stacji z GTFS – stałe między wersjami paczki (numery stacji nie). */
+export async function stationCodes(db: Db, station: number): Promise<string[]> {
+  const rows = await db.all<{ code: string }>('SELECT code FROM stops WHERE station_id = ? ORDER BY id', [station]);
+  return rows.map((r) => r.code).filter(Boolean);
+}
+
+/** Zapamiętany przystanek: kody słupków, nazwa i (gdy znamy) położenie; `station` – numer ze starej paczki. */
+export type StationRef = { codes: string[]; name: string; name_en: string; lat?: number; lon?: number; station?: number };
+
+/** Dalej niż tyle od zapamiętanego punktu i pod inną nazwą – to już nie ten przystanek (np. przewoźnik przenumerował słupki). */
+const SAME_STATION_M = 500;
+
+/**
+ * Ten sam przystanek w tej paczce. Numery stacji zmieniają się przy każdej przebudowie paczki (gtfs_to_web.py),
+ * kody słupków z GTFS – nie. Kolejno:
+ * 1. po kodach słupków – stacja z największą liczbą pasujących (kody bywają zdublowane między przewoźnikami regionu),
+ *    przy remisie najbliższa zapamiętanego punktu;
+ * 2. stary wpis bez kodów (ulubione sprzed 10.2026) – numer, jeśli pod nim stoi przystanek o tej samej nazwie;
+ * 3. po nazwie – najbliższa w promieniu SAME_STATION_M, a bez zapamiętanego punktu tylko gdy taka nazwa jest jedna.
+ * null = przystanku nie ma w tym rozkładzie albo nie da się go wskazać jednoznacznie.
+ */
+export async function resolveStation(db: Db, ref: StationRef): Promise<Station | null> {
+  const hasPoint = Number.isFinite(ref.lat) && Number.isFinite(ref.lon);
+  const dist = (s: Station) => (hasPoint ? distanceM(ref.lat!, ref.lon!, s.lat, s.lon) : 0);
+  const plain = ({ id, name, name_en, lat, lon }: Station): Station => ({ id, name, name_en, lat, lon });
+
+  if (ref.codes.length) {
+    const rows = await db.all<Station & { n: number }>(
+      `SELECT st.id, st.name, st.name_en, st.lat, st.lon, COUNT(*) AS n
+         FROM stops s JOIN stations st ON st.id = s.station_id
+        WHERE s.code IN (${ref.codes.map(() => '?').join(',')})
+        GROUP BY st.id`,
+      ref.codes,
+    );
+    const best = rows.filter((r) => r.name === ref.name || dist(r) <= SAME_STATION_M).sort((a, b) => b.n - a.n || dist(a) - dist(b))[0];
+    if (best) return plain(best);
+  } else if (ref.station != null) {
+    const st = await stationById(db, ref.station);
+    if (st && st.name === ref.name && st.name_en === ref.name_en) return st;
+  }
+
+  const same = await db.all<Station>('SELECT id, name, name_en, lat, lon FROM stations WHERE name = ?', [ref.name]);
+  if (hasPoint) return same.filter((s) => dist(s) <= SAME_STATION_M).sort((a, b) => dist(a) - dist(b))[0] ?? null;
+  return same.length === 1 ? same[0] : null;
+}
+
 /** Normalizacja jak kolumna stops.search: małe litery, bez akcentów, ς→σ. */
 export function normalizeSearch(q: string): string {
   return q

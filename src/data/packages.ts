@@ -135,33 +135,71 @@ function toHex(buf: ArrayBuffer): string {
 }
 
 /**
+ * Dlaczego rozkład się nie zainstalował – do komunikatu na ekranie: brak/zerwany internet (także uszkodzone pobranie),
+ * paczka dla nowszej wersji aplikacji, błąd zapisu w telefonie (np. brak miejsca).
+ */
+export type InstallFailure = 'network' | 'appUpdate' | 'storage';
+export class InstallError extends Error {
+  constructor(
+    readonly reason: InstallFailure,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'InstallError';
+  }
+}
+
+/** Pobieranie w toku, po regionie – drugie wywołanie (np. aktualizacja w tle i dotknięcie w Profilu) czeka na pierwsze. */
+const jobs = new Map<string, Promise<Installed>>();
+
+/**
  * Pobiera i instaluje paczkę regionu. Stara paczka zostaje, dopóki nowa nie jest sprawdzona.
  * onProgress – część pobrana 0…1 (rozmiar z manifestu, gdy serwer nie poda Content-Length).
+ * Błąd zawsze jako InstallError.
  */
-export async function installPackage(pkg: PackageInfo, manifestSchema: number, onProgress?: (part: number) => void): Promise<Installed> {
-  if (manifestSchema > SUPPORTED_SCHEMA) throw new Error('Wymagana aktualizacja aplikacji');
+export function installPackage(pkg: PackageInfo, manifestSchema: number, onProgress?: (part: number) => void): Promise<Installed> {
+  let job = jobs.get(pkg.region);
+  if (!job) {
+    job = runInstall(pkg, manifestSchema, onProgress).finally(() => jobs.delete(pkg.region));
+    jobs.set(pkg.region, job);
+  }
+  return job;
+}
+
+async function runInstall(pkg: PackageInfo, manifestSchema: number, onProgress?: (part: number) => void): Promise<Installed> {
+  if (manifestSchema > SUPPORTED_SCHEMA) throw new InstallError('appUpdate', 'Wymagana aktualizacja aplikacji');
   const tmpDir = new Directory(Paths.cache, 'opabus-download');
-  tmpDir.create({ intermediates: true, idempotent: true });
-  const gzFile = await File.downloadFileAsync(`${DATA_URL}/data/v1/offline/${pkg.file}`, new File(tmpDir, pkg.file), {
-    idempotent: true,
-    onProgress: onProgress
-      ? ({ bytesWritten, totalBytes }) => onProgress(Math.min(1, bytesWritten / (totalBytes > 0 ? totalBytes : pkg.bytes || 1)))
-      : undefined,
-  });
+  const target = new File(tmpDir, pkg.file);
+  let gzFile: File;
+  try {
+    tmpDir.create({ intermediates: true, idempotent: true });
+    gzFile = await File.downloadFileAsync(`${DATA_URL}/data/v1/offline/${pkg.file}`, target, {
+      idempotent: true,
+      onProgress: onProgress
+        ? ({ bytesWritten, totalBytes }) => onProgress(Math.min(1, bytesWritten / (totalBytes > 0 ? totalBytes : pkg.bytes || 1)))
+        : undefined,
+    });
+  } catch (e) {
+    if (target.exists) target.delete();
+    throw new InstallError('network', `Pobieranie ${pkg.file}: ${String(e)}`);
+  }
+  const tmpName = `${dbName(pkg.region)}.tmp`;
   try {
     const gz = await gzFile.bytes();
     const hash = toHex(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, gz));
-    if (hash !== pkg.sha256) throw new Error(`Suma kontrolna się nie zgadza (${pkg.region})`);
+    // Niezgodna suma = plik przerwany albo uszkodzony po drodze – ponowne pobranie zwykle pomaga.
+    if (hash !== pkg.sha256) throw new InstallError('network', `Suma kontrolna się nie zgadza (${pkg.region})`);
     const raw = gunzipSync(gz);
 
     const dir = dbDirectory();
-    const tmp = new File(dir, `${dbName(pkg.region)}.tmp`);
+    const tmp = new File(dir, tmpName);
     if (tmp.exists) tmp.delete();
     tmp.create();
     tmp.write(raw);
 
     await closeRegion(pkg.region);
-    tmp.move(new File(dir, dbName(pkg.region)), { overwrite: true });
+    // move() jest asynchroniczne – wpis o nowej wersji dopiero, gdy plik jest na miejscu.
+    await tmp.move(new File(dir, dbName(pkg.region)), { overwrite: true });
 
     const info: Installed = {
       region: pkg.region,
@@ -172,8 +210,18 @@ export async function installPackage(pkg: PackageInfo, manifestSchema: number, o
     };
     Storage.setItemSync(K_PKG + pkg.region, JSON.stringify(info));
     return info;
+  } catch (e) {
+    if (e instanceof InstallError) throw e;
+    throw new InstallError('storage', `Zapis ${pkg.region}: ${String(e)}`);
   } finally {
     if (gzFile.exists) gzFile.delete();
+    // Po błędzie zapisu (np. pełna pamięć) nie zostawiamy połówki bazy. Nowy obiekt File – po move() stary wskazuje już bazę.
+    try {
+      const left = new File(dbDirectory(), tmpName);
+      if (left.exists) left.delete();
+    } catch {
+      // plik mógł zniknąć sam
+    }
   }
 }
 

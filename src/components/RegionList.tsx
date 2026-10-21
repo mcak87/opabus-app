@@ -1,12 +1,12 @@
 // Lista regionów do pobrania, pogrupowana jak na stronie (regions.json). Używana w Profilu i na ekranie powitalnym.
 // Tu także pasek postępu pobierania rozkładów regionu (lista, Start, wybór regionu, Profil).
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 
 import { C } from '@/constants/theme';
 import { OVERLAY_REGIONS, useData } from '@/data/DataContext';
-import type { PackageInfo } from '@/data/packages';
-import { decimal, getLang, t } from '@/i18n';
+import type { InstallFailure, PackageInfo } from '@/data/packages';
+import { decimal, getLang, t, type Key } from '@/i18n';
 import { formatDate } from '@/lib/time';
 
 import { Icon } from './Icon';
@@ -37,6 +37,20 @@ export function PackageProgress({ region, style }: { region: string; style?: Sty
         <View style={[s.barFill, { width: `${Math.max(3, pct)}%` }]} />
       </View>
     </View>
+  );
+}
+
+const FAIL_TEXT: Record<InstallFailure, Key> = { network: 'installFailNetwork', appUpdate: 'installFailApp', storage: 'installFailStorage' };
+
+/** Dlaczego ostatnie pobieranie rozkładów regionu się nie udało – widoczne do następnej próby. */
+export function InstallFailNote({ region, style }: { region: string; style?: StyleProp<TextStyle> }) {
+  const data = useData();
+  const reason = data.failed[region];
+  if (!reason || data.busy[region]) return null;
+  return (
+    <Txt w="bold" size={13} color={C.orangeText} accessibilityLiveRegion="polite" style={[{ lineHeight: 18 }, style]}>
+      {t(FAIL_TEXT[reason])}
+    </Txt>
   );
 }
 
@@ -105,6 +119,7 @@ export function RegionList({
                           {[t('validTo', { date: formatDate(Number(p.valid_to)) }), fileSize(p.bytes)].join(' · ')}
                         </Txt>
                       )}
+                      <InstallFailNote region={p.region} style={{ marginTop: 2 }} />
                     </View>
                     {right(p)}
                   </Pressable>

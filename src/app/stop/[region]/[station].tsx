@@ -1,6 +1,6 @@
 // Odjazdy ze stacji (przystanek = stacja: słupki po obu stronach ulicy i perony razem).
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
@@ -10,9 +10,19 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { AddPhotoLink, StopPhotos } from '@/components/StopPhotos';
 import { LineBadge, Txt, useTextWidth } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
+import { useData } from '@/data/DataContext';
 import { minutesTo, stationNames } from '@/data/nearby';
-import { openRegion } from '@/data/packages';
-import { lastDeparturesToday, stationById, stationDepartures, stationStops, type Departure, type RegionMeta, type Station } from '@/data/queries';
+import { listInstalled, openRegion } from '@/data/packages';
+import {
+  lastDeparturesToday,
+  resolveStation,
+  stationById,
+  stationDepartures,
+  stationStops,
+  type Departure,
+  type RegionMeta,
+  type Station,
+} from '@/data/queries';
 import { t, useLang } from '@/i18n';
 import { distanceM } from '@/lib/geo';
 import { isFavorite, setLodging, toggleFavorite, useSettings } from '@/lib/settings';
@@ -33,26 +43,36 @@ export default function StopScreen() {
   const [approx, setApprox] = useState(false);
   /** Kody słupków z GTFS – zdjęcia przystanku są przypięte także do nich (numery stacji w paczkach się zmieniają). */
   const [codes, setCodes] = useState<string[]>([]);
+  /** Po aktualizacji rozkładu tego przystanku już nie ma. */
+  const [gone, setGone] = useState(false);
   const { favorites, lodging } = useSettings();
+  const data = useData();
+  const version = data.installed[region]?.version ?? '';
+  /** Wersja paczki, z której jest numer stacji w adresie ekranu. */
+  const shownVersion = useRef(version);
 
   const load = useCallback(async () => {
+    // Nowa paczka już w telefonie, a numer jeszcze stary – czekamy, aż efekt niżej znajdzie ten sam przystanek.
+    if (gone || listInstalled()[region]?.version !== shownVersion.current) return;
     try {
       const { db, cal, meta: m } = await openRegion(region);
       const id = Number(station);
       const n = athensNow();
       setNow(n);
       setMeta(m);
-      setSt(await stationById(db, id));
-      const posts = await stationStops(db, id);
+      const [row, posts] = await Promise.all([stationById(db, id), stationStops(db, id)]);
+      // Kody przed przystankiem – gwiazdka (widoczna, gdy jest przystanek) zapisuje ulubiony razem z kodami.
       setApprox(posts.some((x) => x.verify));
       setCodes(posts.map((x) => x.code).filter(Boolean));
+      setSt(row);
       const list = await stationDepartures(db, cal, id, n, n.sec - 60, n.sec + span);
       setDeps(list.filter((d) => d.dep >= n.sec - 30));
       setLast((await lastDeparturesToday(db, cal, id, n)).filter((d) => d.dep >= n.sec - 30));
+      setError(false);
     } catch {
       setError(true);
     }
-  }, [region, station, span]);
+  }, [region, station, span, gone]);
 
   useFocusEffect(
     useCallback(() => {
@@ -62,20 +82,41 @@ export default function StopScreen() {
     }, [load]),
   );
 
+  // Nowa wersja rozkładu w trakcie oglądania (np. pobrana sama po powrocie do aplikacji): numer stacji mógł się zmienić,
+  // więc ten sam przystanek szukamy po kodach słupków – inaczej ekran pokazałby odjazdy innego przystanku.
+  useEffect(() => {
+    if (!version || shownVersion.current === version) return;
+    const accept = () => {
+      shownVersion.current = version;
+    };
+    const ref = st ? { codes, name: st.name, name_en: st.name_en, lat: st.lat, lon: st.lon } : null;
+    openRegion(region)
+      // Przystanek jeszcze się nie wczytał – nie ma czego szukać, zwykłe wczytanie (undefined).
+      .then(({ db }) => (ref ? resolveStation(db, ref) : undefined))
+      .then((found) => {
+        accept();
+        if (found === null) setGone(true);
+        else if (found && found.id !== Number(station)) router.setParams({ station: String(found.id) });
+        else load();
+      })
+      .catch(accept);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- tylko przy zmianie wersji paczki; przystanek z ostatniego wczytania
+  }, [version]);
+
   const names = st ? stationNames(st) : null;
   const expired = meta && meta.validTo > 0 && meta.validTo < now.date;
-  const fav = isFavorite(favorites, region, Number(station));
+  const fav = isFavorite(favorites, region, Number(station), version);
   const openFix = () => router.push({ pathname: '/popraw/[region]/[station]', params: { region, station: String(station) } });
   const isLodgingStop = !!st && !!lodging && lodging.region === region && distanceM(st.lat, st.lon, lodging.lat, lodging.lon) < 150;
   const timeW = useTextWidth(64);
   const lastW = useTextWidth(56);
 
-  const star = st ? (
+  const star = st && version && !gone ? (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={fav ? t('favRemove') : t('favAdd')}
       accessibilityState={{ selected: fav }}
-      onPress={() => toggleFavorite({ region, station: st.id, name: st.name, name_en: st.name_en })}
+      onPress={() => toggleFavorite({ region, station: st.id, version, codes, name: st.name, name_en: st.name_en, lat: st.lat, lon: st.lon })}
       style={s.star}>
       <Icon name="star" size={24} color={fav ? C.orange : C.ink} fill={fav ? C.yellow : 'none'} stroke={2.2} />
     </Pressable>
@@ -84,143 +125,151 @@ export default function StopScreen() {
   return (
     <View style={s.screen}>
       <ScreenHeader region={region} kicker={t('departuresTitle')} title={names?.main ?? '…'} sub={names?.sub} right={star} />
-      <ScrollView contentContainerStyle={s.body}>
-        {meta && !expired ? (
-          <Txt w="bold" size={13} color={C.muted} style={{ paddingHorizontal: 8 }}>
-            {t('timetableValid', { date: formatDate(meta.validTo) })}
+      {gone ? (
+        <View style={s.body}>
+          <Txt w="bold" color={C.text2}>
+            {t('stopGone')}
           </Txt>
-        ) : null}
-        {/* Rozkład wygasł, nowego jeszcze nie ma – „Poza sezonem” zamiast pustej listy odjazdów. */}
-        {meta && expired ? <OffSeasonCard region={region} station={Number(station)} validFrom={meta.validFrom} validTo={meta.validTo} /> : null}
-
-        {/* Zdjęcia przystanku od użytkowników – pomagają go znaleźć (decyzja Michała 05.10.2026). */}
-        <StopPhotos region={region} station={Number(station)} stopCodes={codes} />
-
-        {st && !expired ? (
-          <LodgingReturn
-            region={region}
-            from={{ lat: st.lat, lon: st.lon }}
-            fromStation={st.id}
-            fromPlace={{ kind: 'station', region, id: st.id, name: st.name, name_en: st.name_en, lat: st.lat, lon: st.lon }}
-          />
-        ) : null}
-
-        {!deps && !error ? <ActivityIndicator color={C.blue} style={{ marginTop: 24 }} /> : null}
-        {error ? <Txt color={C.orangeText}>{t('errorGeneric')}</Txt> : null}
-        {deps && deps.length === 0 && !expired ? <Txt color={C.muted}>{t('noDeparturesSoon')}</Txt> : null}
-
-        {deps?.map((d) => {
-          const min = minutesTo(d.dep, now.sec);
-          return (
-            <Pressable
-              key={`${d.dayOffset}:${d.tripId}`}
-              accessibilityRole="button"
-              onPress={() =>
-                router.push({
-                  pathname: '/trip/[region]/[trip]',
-                  params: { region, trip: String(d.tripId), from: String(station), dep: String(athensEpoch(now, d.dep)) },
-                })
-              }
-              style={({ pressed }) => [s.row, pressed && { opacity: 0.8 }]}>
-              <View style={[s.timeCol, { width: timeW }]}>
-                <Txt w="black" size={20} color={C.ink}>
-                  {d.time}
-                </Txt>
-                <Txt w="extrabold" size={12} color={C.blue}>
-                  {min <= 0 ? t('now') : min < 120 ? t('inMin', { min }) : ' '}
-                </Txt>
-              </View>
-              <View style={{ flex: 1, gap: 3 }}>
-                <View style={s.badgeRow}>
-                  <LineBadge label={d.shortName} color={d.color} agencyCode={d.agencyCode} mode={d.mode} />
-                  <Txt w="extrabold" size={15} numberOfLines={1} style={{ flex: 1 }}>
-                    {d.headsign}
-                  </Txt>
-                </View>
-                <Txt w="bold" size={12} color={C.muted} numberOfLines={1}>
-                  {[d.est ? t('approx', { time: d.time }) : null, d.agency].filter(Boolean).join(' · ')}
-                </Txt>
-              </View>
-              <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
-            </Pressable>
-          );
-        })}
-
-        {deps && deps.length > 0 ? (
-          <Pressable accessibilityRole="button" onPress={() => setSpan((x) => x + STEP)} style={s.more}>
-            <Txt w="extrabold" color={C.blue}>
-              {t('showMore')}
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={s.body}>
+          {meta && !expired ? (
+            <Txt w="bold" size={13} color={C.muted} style={{ paddingHorizontal: 8 }}>
+              {t('timetableValid', { date: formatDate(meta.validTo) })}
             </Txt>
-          </Pressable>
-        ) : null}
+          ) : null}
+          {/* Rozkład wygasł, nowego jeszcze nie ma – „Poza sezonem” zamiast pustej listy odjazdów. */}
+          {meta && expired ? <OffSeasonCard region={region} station={Number(station)} validFrom={meta.validFrom} validTo={meta.validTo} /> : null}
 
-        {last.length > 0 ? (
-          <View style={s.lastCard}>
-            <View style={s.lastIcon}>
-              <Icon name="moon" size={24} color="#FFFFFF" stroke={2.2} />
-            </View>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Txt w="extrabold" size={14} color={C.orangeText}>
-                {t('lastToday')}
-              </Txt>
-              {last.slice(-4).map((d) => (
-                <View key={d.headsign} style={s.badgeRow}>
-                  <Txt w="black" size={18} color={C.orangeDeep} style={{ minWidth: lastW }}>
+          {/* Zdjęcia przystanku od użytkowników – pomagają go znaleźć (decyzja Michała 05.10.2026). */}
+          <StopPhotos region={region} station={Number(station)} stopCodes={codes} />
+
+          {st && !expired ? (
+            <LodgingReturn
+              region={region}
+              from={{ lat: st.lat, lon: st.lon }}
+              fromStation={st.id}
+              fromPlace={{ kind: 'station', region, id: st.id, name: st.name, name_en: st.name_en, lat: st.lat, lon: st.lon }}
+            />
+          ) : null}
+
+          {!deps && !error ? <ActivityIndicator color={C.blue} style={{ marginTop: 24 }} /> : null}
+          {error ? <Txt color={C.orangeText}>{t('errorGeneric')}</Txt> : null}
+          {deps && deps.length === 0 && !expired ? <Txt color={C.muted}>{t('noDeparturesSoon')}</Txt> : null}
+
+          {deps?.map((d) => {
+            const min = minutesTo(d.dep, now.sec);
+            return (
+              <Pressable
+                key={`${d.dayOffset}:${d.tripId}`}
+                accessibilityRole="button"
+                onPress={() =>
+                  router.push({
+                    pathname: '/trip/[region]/[trip]',
+                    params: { region, trip: String(d.tripId), from: String(station), dep: String(athensEpoch(now, d.dep)) },
+                  })
+                }
+                style={({ pressed }) => [s.row, pressed && { opacity: 0.8 }]}>
+                <View style={[s.timeCol, { width: timeW }]}>
+                  <Txt w="black" size={20} color={C.ink}>
                     {d.time}
                   </Txt>
-                  <Txt w="bold" size={14} color={C.orangeDeep} numberOfLines={1} style={{ flex: 1 }}>
-                    {d.headsign}
+                  <Txt w="extrabold" size={12} color={C.blue}>
+                    {min <= 0 ? t('now') : min < 120 ? t('inMin', { min }) : ' '}
                   </Txt>
                 </View>
-              ))}
-            </View>
-          </View>
-        ) : null}
-        {/* Poza sezonem karta wyżej prosi już o zdjęcie (rozkładu na przystanku) – bez drugiej prośby. */}
-        {st && !expired ? <AddPhotoLink region={region} station={st.id} stopCodes={codes} /> : null}
-        {st ? (
-          approx ? (
-            <Pressable accessibilityRole="button" onPress={openFix} style={s.fixCard}>
-              <Icon name="pin" size={24} color={C.orange} />
-              <View style={{ flex: 1, gap: 2 }}>
-                <Txt w="extrabold" size={15} color={C.orangeText}>
-                  {t('fixApproxTitle')}
-                </Txt>
-                <Txt w="semibold" size={13} color={C.orangeDeep} style={{ lineHeight: 18 }}>
-                  {t('fixApproxBody')}
-                </Txt>
-              </View>
-              <Icon name="chevronR" size={18} color={C.orangeText} stroke={2.4} />
-            </Pressable>
-          ) : (
-            <Pressable accessibilityRole="button" onPress={openFix} style={s.fixLink} hitSlop={6}>
-              <Icon name="pin" size={16} color={C.muted} />
-              <Txt w="bold" size={13} color={C.muted}>
-                {t('fixButton')}
+                <View style={{ flex: 1, gap: 3 }}>
+                  <View style={s.badgeRow}>
+                    <LineBadge label={d.shortName} color={d.color} agencyCode={d.agencyCode} mode={d.mode} />
+                    <Txt w="extrabold" size={15} numberOfLines={1} style={{ flex: 1 }}>
+                      {d.headsign}
+                    </Txt>
+                  </View>
+                  <Txt w="bold" size={12} color={C.muted} numberOfLines={1}>
+                    {[d.est ? t('approx', { time: d.time }) : null, d.agency].filter(Boolean).join(' · ')}
+                  </Txt>
+                </View>
+                <Icon name="chevronR" size={18} color={C.faint} stroke={2.4} />
+              </Pressable>
+            );
+          })}
+
+          {deps && deps.length > 0 ? (
+            <Pressable accessibilityRole="button" onPress={() => setSpan((x) => x + STEP)} style={s.more}>
+              <Txt w="extrabold" color={C.blue}>
+                {t('showMore')}
               </Txt>
             </Pressable>
-          )
-        ) : null}
-        {st && isLodgingStop ? (
-          <View style={s.fixLink}>
-            <Icon name="home" size={16} color={C.green} />
-            <Txt w="bold" size={13} color={C.green}>
-              {t('lodgingIsHere')}
-            </Txt>
-          </View>
-        ) : st && !lodging ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setLodging({ region, lat: st.lat, lon: st.lon, near: { name: st.name, name_en: st.name_en } })}
-            style={s.fixLink}
-            hitSlop={6}>
-            <Icon name="home" size={16} color={C.blue} />
-            <Txt w="bold" size={13} color={C.blue}>
-              {t('lodgingSetStop')}
-            </Txt>
-          </Pressable>
-        ) : null}
-      </ScrollView>
+          ) : null}
+
+          {last.length > 0 ? (
+            <View style={s.lastCard}>
+              <View style={s.lastIcon}>
+                <Icon name="moon" size={24} color="#FFFFFF" stroke={2.2} />
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Txt w="extrabold" size={14} color={C.orangeText}>
+                  {t('lastToday')}
+                </Txt>
+                {last.slice(-4).map((d) => (
+                  <View key={d.headsign} style={s.badgeRow}>
+                    <Txt w="black" size={18} color={C.orangeDeep} style={{ minWidth: lastW }}>
+                      {d.time}
+                    </Txt>
+                    <Txt w="bold" size={14} color={C.orangeDeep} numberOfLines={1} style={{ flex: 1 }}>
+                      {d.headsign}
+                    </Txt>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : null}
+          {/* Poza sezonem karta wyżej prosi już o zdjęcie (rozkładu na przystanku) – bez drugiej prośby. */}
+          {st && !expired ? <AddPhotoLink region={region} station={st.id} stopCodes={codes} /> : null}
+          {st ? (
+            approx ? (
+              <Pressable accessibilityRole="button" onPress={openFix} style={s.fixCard}>
+                <Icon name="pin" size={24} color={C.orange} />
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Txt w="extrabold" size={15} color={C.orangeText}>
+                    {t('fixApproxTitle')}
+                  </Txt>
+                  <Txt w="semibold" size={13} color={C.orangeDeep} style={{ lineHeight: 18 }}>
+                    {t('fixApproxBody')}
+                  </Txt>
+                </View>
+                <Icon name="chevronR" size={18} color={C.orangeText} stroke={2.4} />
+              </Pressable>
+            ) : (
+              <Pressable accessibilityRole="button" onPress={openFix} style={s.fixLink} hitSlop={6}>
+                <Icon name="pin" size={16} color={C.muted} />
+                <Txt w="bold" size={13} color={C.muted}>
+                  {t('fixButton')}
+                </Txt>
+              </Pressable>
+            )
+          ) : null}
+          {st && isLodgingStop ? (
+            <View style={s.fixLink}>
+              <Icon name="home" size={16} color={C.green} />
+              <Txt w="bold" size={13} color={C.green}>
+                {t('lodgingIsHere')}
+              </Txt>
+            </View>
+          ) : st && !lodging ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setLodging({ region, lat: st.lat, lon: st.lon, near: { name: st.name, name_en: st.name_en } })}
+              style={s.fixLink}
+              hitSlop={6}>
+              <Icon name="home" size={16} color={C.blue} />
+              <Txt w="bold" size={13} color={C.blue}>
+                {t('lodgingSetStop')}
+              </Txt>
+            </Pressable>
+          ) : null}
+        </ScrollView>
+      )}
     </View>
   );
 }

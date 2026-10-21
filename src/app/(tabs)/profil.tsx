@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BadgeMedal } from '@/components/BadgeMedal';
 import { Icon } from '@/components/Icon';
 import { MapOfflineRow } from '@/components/MapOfflineRow';
-import { PackageProgress, RegionList } from '@/components/RegionList';
+import { InstallFailNote, PackageProgress, RegionList } from '@/components/RegionList';
 import { ExactAlarmHint } from '@/components/ReminderButton';
 import { Button, PanoramaHeader, Pill, Txt } from '@/components/ui';
 import { C, shadow } from '@/constants/theme';
@@ -262,13 +262,24 @@ export default function ProfileScreen() {
                       {data.regionName(i.region)}
                     </Txt>
                     <Txt w="bold" size={13} color={C.muted}>
-                      {[t('validTo', { date: formatDate(i.validTo) }), data.hasUpdate(i.region) ? null : t('upToDate')].filter(Boolean).join(' · ')}
+                      {[
+                        t('validTo', { date: formatDate(i.validTo) }),
+                        !data.hasUpdate(i.region) ? t('upToDate') : data.updateWaitsForWifi(i.region) ? t('updateOnWifi') : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
                     </Txt>
+                    <InstallFailNote region={i.region} style={{ marginTop: 2 }} />
                   </View>
                   {data.busy[i.region] ? (
                     <ActivityIndicator color={C.blue} />
                   ) : data.hasUpdate(i.region) ? (
-                    <Pressable accessibilityRole="button" accessibilityLabel={`${t('update')} ${data.regionName(i.region)}`} onPress={() => data.install(i.region)} style={s.dl}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={`${t('update')} ${data.regionName(i.region)}`}
+                      // Błąd pokazuje InstallFailNote pod nazwą regionu.
+                      onPress={() => data.install(i.region).catch(() => {})}
+                      style={s.dl}>
                       <Icon name="refresh" size={20} color={C.blue} stroke={2.4} />
                     </Pressable>
                   ) : null}
@@ -297,7 +308,12 @@ export default function ProfileScreen() {
                 ) : data.installed[p.region] ? (
                   <Icon name="check" size={22} color={C.green} stroke={2.6} />
                 ) : (
-                  <Pressable accessibilityRole="button" accessibilityLabel={`${t('download')} ${data.regionName(p.region)}`} onPress={() => data.install(p.region, { withMap: true })} style={s.dl}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t('download')} ${data.regionName(p.region)}`}
+                    // Błąd pokazuje InstallFailNote w wierszu regionu (RegionList).
+                    onPress={() => data.install(p.region, { withMap: true }).catch(() => {})}
+                    style={s.dl}>
                     <Icon name="download" size={20} color={C.blue} stroke={2.4} />
                   </Pressable>
                 )
