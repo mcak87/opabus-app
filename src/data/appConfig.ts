@@ -6,11 +6,13 @@ import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
 
 import type { Lang } from '@/i18n';
+import { athensNow } from '@/lib/time';
 
 import { getJson } from './packages';
 
-/** Komunikat w kilku językach: { id, pl, en, el, …, url? }. Nowe id = komunikat pokaże się znowu. */
-export type Notice = { id: string; url?: string } & { [lang: string]: string | undefined };
+/** Komunikat w kilku językach: { id, pl, en, el, …, url?, from?, until? }. Nowe id = komunikat pokaże się znowu.
+ *  from / until – „RRRR-MM-DD” (czas Aten, włącznie): komunikat widoczny tylko w tych dniach, także bez internetu. */
+export type Notice = { id: string; url?: string; from?: string; until?: string } & { [lang: string]: string | undefined };
 export type AppConfig = {
   minVersion?: { android?: string; ios?: string };
   notice?: Notice | null;
@@ -84,9 +86,15 @@ export function storeUrl(cfg: AppConfig): string {
   return Platform.OS === 'ios' ? cfg.store?.ios || 'itms-apps://apps.apple.com/' : cfg.store?.android || ANDROID_STORE;
 }
 
-export function activeNotice(s: State, lang: Lang): { id: string; text: string; url?: string } | null {
+/** „2026-11-03” → 20261103; zły zapis → null (wtedy bez ograniczenia daty). */
+const ymdNum = (v?: string) => (v && /^\d{4}-\d{2}-\d{2}$/.test(v) ? Number(v.replace(/-/g, '')) : null);
+
+export function activeNotice(s: State, lang: Lang, today: number = athensNow().date): { id: string; text: string; url?: string } | null {
   const n = s.config.notice;
   if (!n?.id || s.dismissed.includes(n.id)) return null;
+  const from = ymdNum(n.from);
+  const until = ymdNum(n.until);
+  if ((from && today < from) || (until && today > until)) return null;
   const text = n[lang] || n.en || n.pl;
   if (!text) return null;
   return { id: n.id, text, url: n.url?.startsWith('https://') ? n.url : undefined };
